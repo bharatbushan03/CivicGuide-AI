@@ -6,6 +6,7 @@ export const contentData = {
       description: "Understand what elections are and why they matter.",
       icon: "BookOpen",
       type: "flow",
+      suggestedNext: "voting",
       steps: [
         {
           title: "What is an Election?",
@@ -33,6 +34,8 @@ export const contentData = {
       description: "A step-by-step guide on how to register and cast your vote.",
       icon: "CheckSquare",
       type: "flow",
+      suggestedNext: "timeline",
+      suggestedScenario: "no_vote",
       steps: [
         {
           title: "1. Registration",
@@ -66,6 +69,7 @@ export const contentData = {
       description: "Explore the stages of an election from start to finish.",
       icon: "Clock",
       type: "timeline",
+      suggestedScenario: "counting",
       stages: [
         {
           title: "Announcement",

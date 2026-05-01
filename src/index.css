@@ -130,11 +130,12 @@ button {
   font-size: 1.1rem;
 }
 
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+.section-title {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
 }
 
 /* Home Grid */
@@ -142,6 +143,7 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
+  margin-bottom: 3rem;
 }
 
 .home-card {
@@ -156,12 +158,32 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  position: relative;
+  overflow: hidden;
 }
 
 .home-card:hover {
   transform: translateY(-5px);
   border-color: var(--primary);
   box-shadow: 0 10px 20px rgba(79, 70, 229, 0.15);
+}
+
+.home-card.recommended {
+  border-color: var(--secondary);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+}
+
+.home-card.recommended::before {
+  content: 'Recommended';
+  position: absolute;
+  top: 10px;
+  right: -30px;
+  background-color: var(--secondary);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 2rem;
+  transform: rotate(45deg);
 }
 
 .home-card-icon {
@@ -175,6 +197,11 @@ button {
   justify-content: center;
 }
 
+.home-card.recommended .home-card-icon {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--secondary);
+}
+
 .home-card h3 {
   font-size: 1.25rem;
 }
@@ -183,6 +210,44 @@ button {
   color: var(--text-muted);
   font-size: 0.95rem;
   margin: 0;
+}
+
+/* Resume Banner */
+.resume-banner {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(16, 185, 129, 0.1));
+  border: 1px solid var(--primary);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resume-content h3 {
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+}
+
+.resume-content p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.resume-btn {
+  background-color: var(--primary);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.resume-btn:hover {
+  background-color: var(--primary-hover);
 }
 
 /* Flow Styles */
@@ -558,12 +623,31 @@ button {
   gap: 1.5rem;
   cursor: pointer;
   transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
 }
 
 .scenario-card:hover {
   border-color: var(--primary);
   background-color: var(--surface-hover);
   transform: translateX(5px);
+}
+
+.scenario-card.recommended {
+  border-color: var(--secondary);
+}
+
+.scenario-card.recommended::before {
+  content: 'Recommended';
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: var(--secondary);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 0.25rem 1rem;
+  border-bottom-left-radius: 0.5rem;
 }
 
 .scenario-icon {

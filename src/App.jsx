@@ -3,7 +3,8 @@ import {
   BookOpen, CheckSquare, Clock, MessageSquare, 
   ChevronRight, ChevronLeft, MinusCircle, PlusCircle,
   Home, Send, ArrowLeft, Megaphone, UserPlus, Mic, 
-  Vote, Calculator, Award, HelpCircle, AlertTriangle, Scale
+  Vote, Calculator, Award, HelpCircle, AlertTriangle, Scale,
+  PlayCircle
 } from 'lucide-react';
 import { contentData } from './data/content';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,11 +28,31 @@ const getIcon = (iconName, props = { size: 32 }) => {
   }
 };
 
+const useProfile = () => {
+  const [profile, setProfile] = useState(() => {
+    const saved = localStorage.getItem('civicGuideProfile');
+    if (saved) return JSON.parse(saved);
+    return {
+      knowledgeLevel: 'normal',
+      exploredTopics: [],
+      lastPosition: null
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('civicGuideProfile', JSON.stringify(profile));
+  }, [profile]);
+
+  return [profile, setProfile];
+};
+
 function App() {
+  const [profile, setProfile] = useProfile();
+  
   const [activeTab, setActiveTab] = useState('home'); // 'home', 'flow', 'chat'
   const [activeFlowId, setActiveFlowId] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
-  const [explanationDepth, setExplanationDepth] = useState('normal'); 
+  const [explanationDepth, setExplanationDepth] = useState(profile.knowledgeLevel); 
   const [activeScenarioId, setActiveScenarioId] = useState(null);
   
   // Chat state
@@ -48,12 +69,22 @@ function App() {
     }
   }, [chatHistory, isTyping, activeTab]);
 
-  const startFlow = (flowId) => {
+  const updateProfileKnowledge = (depth) => {
+    setExplanationDepth(depth);
+    setProfile(prev => ({ ...prev, knowledgeLevel: depth }));
+  };
+
+  const startFlow = (flowId, resumeStep = 0, scenarioId = null) => {
     setActiveFlowId(flowId);
-    setCurrentStep(0);
-    setExplanationDepth('normal');
-    setActiveScenarioId(null);
+    setCurrentStep(resumeStep);
+    setExplanationDepth(profile.knowledgeLevel);
+    setActiveScenarioId(scenarioId);
     setActiveTab('flow');
+    
+    setProfile(prev => ({
+      ...prev,
+      lastPosition: { flowId, step: resumeStep, scenarioId }
+    }));
   };
 
   const handleNextStep = () => {
@@ -68,11 +99,25 @@ function App() {
     }
 
     if (currentStep < maxSteps - 1) {
-      setCurrentStep(prev => prev + 1);
-      setExplanationDepth('normal');
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      setExplanationDepth(profile.knowledgeLevel);
+      setProfile(prev => ({
+        ...prev,
+        lastPosition: { flowId: activeFlowId, step: nextStep, scenarioId: activeScenarioId }
+      }));
     } else {
+      // Finished!
+      setProfile(prev => {
+        const newExplored = [...prev.exploredTopics];
+        if (!newExplored.includes(activeFlowId)) newExplored.push(activeFlowId);
+        if (activeScenarioId && !newExplored.includes(`scenario_${activeScenarioId}`)) {
+          newExplored.push(`scenario_${activeScenarioId}`);
+        }
+        return { ...prev, exploredTopics: newExplored, lastPosition: null };
+      });
+
       if (flow.type === 'scenarios' && activeScenarioId) {
-        // Return to scenario list
         setActiveScenarioId(null);
         setCurrentStep(0);
       } else {
@@ -84,9 +129,18 @@ function App() {
 
   const handlePrevStep = () => {
     if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
-      setExplanationDepth('normal');
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
+      setExplanationDepth(profile.knowledgeLevel);
+      setProfile(prev => ({
+        ...prev,
+        lastPosition: { flowId: activeFlowId, step: prevStep, scenarioId: activeScenarioId }
+      }));
     }
+  };
+
+  const goHome = () => {
+    setActiveTab('home');
   };
 
   const handleTextSubmit = (e) => {
@@ -100,7 +154,6 @@ function App() {
 
     setTimeout(() => {
       let botResponse = contentData.chat.fallback;
-      
       if (userText.includes('tie')) botResponse = contentData.chat.scenarios.tie;
       else if (userText.includes('not vote') || userText.includes("don't vote") || userText.includes("dont vote")) botResponse = contentData.chat.scenarios.novote;
       else if (userText.includes('count')) botResponse = contentData.chat.scenarios.count;
@@ -111,32 +164,70 @@ function App() {
     }, 1000);
   };
 
-  const renderHome = () => (
-    <motion.div 
-      key="home"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="home-grid"
-    >
-      {Object.values(contentData.flows).map(flow => (
-        <div key={flow.id} className="home-card" onClick={() => startFlow(flow.id)}>
-          <div className="home-card-icon">
-            {getIcon(flow.icon)}
+  const getRecommendedFlow = () => {
+    if (profile.exploredTopics.includes('basics') && !profile.exploredTopics.includes('voting')) return 'voting';
+    if (profile.exploredTopics.includes('voting') && !profile.exploredTopics.includes('timeline')) return 'timeline';
+    if (profile.exploredTopics.includes('timeline') && !profile.exploredTopics.includes('scenarios')) return 'scenarios';
+    if (profile.exploredTopics.length === 0) return 'basics';
+    return null;
+  };
+
+  const renderHome = () => {
+    const recommendedFlowId = getRecommendedFlow();
+
+    return (
+      <motion.div 
+        key="home"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+      >
+        {profile.lastPosition && (
+          <div className="resume-banner">
+            <div className="resume-content">
+              <h3>Pick up where you left off</h3>
+              <p>Continue your journey in {contentData.flows[profile.lastPosition.flowId].title}</p>
+            </div>
+            <button 
+              className="resume-btn"
+              onClick={() => startFlow(profile.lastPosition.flowId, profile.lastPosition.step, profile.lastPosition.scenarioId)}
+            >
+              <PlayCircle size={20} /> Resume
+            </button>
           </div>
-          <h3>{flow.title}</h3>
-          <p>{flow.description}</p>
+        )}
+
+        {recommendedFlowId && (
+          <h2 className="section-title">Recommended for You</h2>
+        )}
+        <div className="home-grid">
+          {Object.values(contentData.flows).map(flow => {
+            const isRecommended = flow.id === recommendedFlowId;
+            return (
+              <div 
+                key={flow.id} 
+                className={`home-card ${isRecommended ? 'recommended' : ''}`} 
+                onClick={() => startFlow(flow.id)}
+              >
+                <div className="home-card-icon">
+                  {getIcon(flow.icon)}
+                </div>
+                <h3>{flow.title}</h3>
+                <p>{flow.description}</p>
+              </div>
+            );
+          })}
+          <div className="home-card" onClick={() => setActiveTab('chat')}>
+            <div className="home-card-icon">
+              <MessageSquare size={32} />
+            </div>
+            <h3>Ask a Question</h3>
+            <p>Chat directly with CivicGuide AI for specific queries.</p>
+          </div>
         </div>
-      ))}
-      <div className="home-card" onClick={() => setActiveTab('chat')}>
-        <div className="home-card-icon">
-          <MessageSquare size={32} />
-        </div>
-        <h3>Ask a Question</h3>
-        <p>Chat directly with CivicGuide AI for specific queries.</p>
-      </div>
-    </motion.div>
-  );
+      </motion.div>
+    );
+  };
 
   const renderFlow = () => {
     const flow = contentData.flows[activeFlowId];
@@ -155,7 +246,7 @@ function App() {
           className="flow-container"
         >
           <div className="flow-header">
-            <button className="back-btn" onClick={() => setActiveTab('home')} title="Back to menu">
+            <button className="back-btn" onClick={goHome} title="Back to menu">
               <ArrowLeft size={20} />
             </button>
             <h2 className="flow-title">{flow.title}</h2>
@@ -170,7 +261,10 @@ function App() {
               <div 
                 key={idx} 
                 className={`h-timeline-node ${idx === currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}
-                onClick={() => setCurrentStep(idx)}
+                onClick={() => {
+                  setCurrentStep(idx);
+                  setProfile(prev => ({...prev, lastPosition: { flowId: activeFlowId, step: idx, scenarioId: null }}));
+                }}
               >
                 <div className="h-timeline-dot"></div>
                 <div className="h-timeline-label">{stage.shortDesc}</div>
@@ -205,13 +299,20 @@ function App() {
             <button className="btn-nav" onClick={handlePrevStep} disabled={currentStep === 0}>
               <ChevronLeft size={20} /> Previous Stage
             </button>
-            <button 
-              className="btn-nav" 
-              onClick={handleNextStep}
-              style={currentStep === flow.stages.length - 1 ? { backgroundColor: 'var(--secondary)', color: 'white' } : {}}
-            >
-              {currentStep === flow.stages.length - 1 ? 'Finish Timeline' : 'Next Stage'} <ChevronRight size={20} />
-            </button>
+            <div style={{display: 'flex', gap: '1rem'}}>
+              {currentStep === flow.stages.length - 1 && flow.suggestedScenario && (
+                <button className="btn-nav" style={{backgroundColor: 'var(--surface)', border: '1px solid var(--secondary)', color: 'var(--secondary)'}} onClick={() => startFlow('scenarios', 0, flow.suggestedScenario)}>
+                   Try Scenario
+                </button>
+              )}
+              <button 
+                className="btn-nav" 
+                onClick={handleNextStep}
+                style={currentStep === flow.stages.length - 1 ? { backgroundColor: 'var(--secondary)', color: 'white' } : {}}
+              >
+                {currentStep === flow.stages.length - 1 ? 'Finish Timeline' : 'Next Stage'} <ChevronRight size={20} />
+              </button>
+            </div>
           </div>
         </motion.div>
       );
@@ -220,18 +321,24 @@ function App() {
     // --- SCENARIO VIEW ---
     if (flow.type === 'scenarios') {
       if (!activeScenarioId) {
-        // Show scenario list
+        // Find a recommended scenario based on explored topics
+        const recScenario = flow.cases.find(c => !profile.exploredTopics.includes(`scenario_${c.id}`))?.id;
+
         return (
           <motion.div key="scenario-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flow-container">
             <div className="flow-header">
-              <button className="back-btn" onClick={() => setActiveTab('home')} title="Back to menu"><ArrowLeft size={20} /></button>
+              <button className="back-btn" onClick={goHome} title="Back to menu"><ArrowLeft size={20} /></button>
               <h2 className="flow-title">{flow.title}</h2>
             </div>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{flow.description}</p>
             
             <div className="scenario-grid">
               {flow.cases.map(sc => (
-                <div key={sc.id} className="scenario-card" onClick={() => { setActiveScenarioId(sc.id); setCurrentStep(0); }}>
+                <div 
+                  key={sc.id} 
+                  className={`scenario-card ${recScenario === sc.id ? 'recommended' : ''}`} 
+                  onClick={() => startFlow('scenarios', 0, sc.id)}
+                >
                   <div className="scenario-icon">{getIcon(sc.icon, { size: 28 })}</div>
                   <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{sc.question}</h3>
                   <ChevronRight style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
@@ -250,7 +357,7 @@ function App() {
       return (
         <motion.div key={`scenario-${activeScenarioId}-${currentStep}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flow-container">
           <div className="flow-header">
-            <button className="back-btn" onClick={() => { setActiveScenarioId(null); setCurrentStep(0); }} title="Back to scenarios">
+            <button className="back-btn" onClick={() => { setActiveScenarioId(null); setCurrentStep(0); setProfile(prev => ({...prev, lastPosition: { flowId: 'scenarios', step: 0, scenarioId: null }})); }} title="Back to scenarios">
               <ArrowLeft size={20} />
             </button>
             <h2 className="flow-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -283,7 +390,7 @@ function App() {
                 onClick={handleNextStep}
                 style={currentStep === totalSteps - 1 ? { backgroundColor: 'var(--secondary)', color: 'white' } : {}}
               >
-                {currentStep === totalSteps - 1 ? 'Explore Another Scenario' : 'What Happens Next?'} <ChevronRight size={20} />
+                {currentStep === totalSteps - 1 ? 'Finish Scenario' : 'What Happens Next?'} <ChevronRight size={20} />
               </button>
             </div>
           </div>
@@ -309,7 +416,7 @@ function App() {
         className="flow-container"
       >
         <div className="flow-header">
-          <button className="back-btn" onClick={() => setActiveTab('home')} title="Back to menu">
+          <button className="back-btn" onClick={goHome} title="Back to menu">
             <ArrowLeft size={20} />
           </button>
           <h2 className="flow-title">{flow.title}</h2>
@@ -330,21 +437,23 @@ function App() {
               {step.simplified && (
                 <button 
                   className={`depth-btn ${explanationDepth === 'simplified' ? 'active' : ''}`}
-                  onClick={() => setExplanationDepth('simplified')}
+                  onClick={() => updateProfileKnowledge('simplified')}
+                  title="Make it simpler (App will remember your preference)"
                 >
                   <MinusCircle size={18} /> Simplify
                 </button>
               )}
               <button 
                 className={`depth-btn ${explanationDepth === 'normal' ? 'active' : ''}`}
-                onClick={() => setExplanationDepth('normal')}
+                onClick={() => updateProfileKnowledge('normal')}
               >
                 <BookOpen size={18} /> Normal
               </button>
               {step.expanded && (
                 <button 
                   className={`depth-btn ${explanationDepth === 'expanded' ? 'active' : ''}`}
-                  onClick={() => setExplanationDepth('expanded')}
+                  onClick={() => updateProfileKnowledge('expanded')}
+                  title="Show more detail (App will remember your preference)"
                 >
                   <PlusCircle size={18} /> Tell Me More
                 </button>
@@ -371,13 +480,20 @@ function App() {
             >
               <ChevronLeft size={20} /> Previous
             </button>
-            <button 
-              className="btn-nav" 
-              onClick={handleNextStep}
-              style={currentStep === totalSteps - 1 ? { backgroundColor: 'var(--secondary)', color: 'white' } : {}}
-            >
-              {currentStep === totalSteps - 1 ? 'Finish Flow' : 'Next Step'} <ChevronRight size={20} />
-            </button>
+            <div style={{display: 'flex', gap: '1rem'}}>
+               {currentStep === totalSteps - 1 && flow.suggestedNext && (
+                 <button className="btn-nav" style={{backgroundColor: 'var(--surface)', border: '1px solid var(--secondary)', color: 'var(--secondary)'}} onClick={() => startFlow(flow.suggestedNext)}>
+                    Skip to Next Topic
+                 </button>
+               )}
+               <button 
+                 className="btn-nav" 
+                 onClick={handleNextStep}
+                 style={currentStep === totalSteps - 1 ? { backgroundColor: 'var(--secondary)', color: 'white' } : {}}
+               >
+                 {currentStep === totalSteps - 1 ? 'Finish Flow' : 'Next Step'} <ChevronRight size={20} />
+               </button>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -393,7 +509,7 @@ function App() {
       style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
     >
       <div className="flow-header">
-        <button className="back-btn" onClick={() => setActiveTab('home')} title="Back to menu">
+        <button className="back-btn" onClick={goHome} title="Back to menu">
           <ArrowLeft size={20} />
         </button>
         <h2 className="flow-title">Ask CivicGuide AI</h2>
@@ -448,11 +564,11 @@ function App() {
   return (
     <>
       <nav className="navbar">
-        <div className="logo" onClick={() => setActiveTab('home')}>
+        <div className="logo" onClick={goHome}>
           <BookOpen className="icon" size={24} /> CivicGuide AI
         </div>
         <div className="nav-links">
-          <button className={`nav-link ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
+          <button className={`nav-link ${activeTab === 'home' ? 'active' : ''}`} onClick={goHome}>
             <Home size={18} /> Home
           </button>
           <button className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
