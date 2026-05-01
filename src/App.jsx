@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, CheckSquare, Clock, MessageSquare, 
   ChevronRight, ChevronLeft, MinusCircle, PlusCircle,
-  Home, Send, ArrowLeft
+  Home, Send, ArrowLeft, Megaphone, UserPlus, Mic, 
+  Vote, Calculator, Award, HelpCircle, AlertTriangle, Scale
 } from 'lucide-react';
 import { contentData } from './data/content';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,6 +14,15 @@ const getIcon = (iconName, props = { size: 32 }) => {
     case 'CheckSquare': return <CheckSquare {...props} />;
     case 'Clock': return <Clock {...props} />;
     case 'MessageSquare': return <MessageSquare {...props} />;
+    case 'Megaphone': return <Megaphone {...props} />;
+    case 'UserPlus': return <UserPlus {...props} />;
+    case 'Mic': return <Mic {...props} />;
+    case 'Vote': return <Vote {...props} />;
+    case 'Calculator': return <Calculator {...props} />;
+    case 'Award': return <Award {...props} />;
+    case 'HelpCircle': return <HelpCircle {...props} />;
+    case 'AlertTriangle': return <AlertTriangle {...props} />;
+    case 'Scale': return <Scale {...props} />;
     default: return <BookOpen {...props} />;
   }
 };
@@ -21,7 +31,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('home'); // 'home', 'flow', 'chat'
   const [activeFlowId, setActiveFlowId] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
-  const [explanationDepth, setExplanationDepth] = useState('normal'); // 'simplified', 'normal', 'expanded'
+  const [explanationDepth, setExplanationDepth] = useState('normal'); 
+  const [activeScenarioId, setActiveScenarioId] = useState(null);
   
   // Chat state
   const [chatHistory, setChatHistory] = useState([
@@ -41,18 +52,33 @@ function App() {
     setActiveFlowId(flowId);
     setCurrentStep(0);
     setExplanationDepth('normal');
+    setActiveScenarioId(null);
     setActiveTab('flow');
   };
 
   const handleNextStep = () => {
     const flow = contentData.flows[activeFlowId];
-    if (currentStep < flow.steps.length - 1) {
+    let maxSteps = 0;
+    
+    if (flow.type === 'flow') maxSteps = flow.steps.length;
+    else if (flow.type === 'timeline') maxSteps = flow.stages.length;
+    else if (flow.type === 'scenarios' && activeScenarioId) {
+       const scenario = flow.cases.find(c => c.id === activeScenarioId);
+       maxSteps = scenario.steps.length;
+    }
+
+    if (currentStep < maxSteps - 1) {
       setCurrentStep(prev => prev + 1);
       setExplanationDepth('normal');
     } else {
-      // Finished flow
-      setActiveTab('home');
-      setActiveFlowId(null);
+      if (flow.type === 'scenarios' && activeScenarioId) {
+        // Return to scenario list
+        setActiveScenarioId(null);
+        setCurrentStep(0);
+      } else {
+        setActiveTab('home');
+        setActiveFlowId(null);
+      }
     }
   };
 
@@ -75,7 +101,6 @@ function App() {
     setTimeout(() => {
       let botResponse = contentData.chat.fallback;
       
-      // Basic keyword matching for scenario routing
       if (userText.includes('tie')) botResponse = contentData.chat.scenarios.tie;
       else if (userText.includes('not vote') || userText.includes("don't vote") || userText.includes("dont vote")) botResponse = contentData.chat.scenarios.novote;
       else if (userText.includes('count')) botResponse = contentData.chat.scenarios.count;
@@ -117,10 +142,11 @@ function App() {
     const flow = contentData.flows[activeFlowId];
     if (!flow) return null;
 
-    const isTimeline = flow.isTimeline;
-    
-    if (isTimeline) {
-      // Render timeline view
+    // --- TIMELINE VIEW ---
+    if (flow.type === 'timeline') {
+      const activeStage = flow.stages[currentStep];
+      const progressWidth = (currentStep / (flow.stages.length - 1)) * 100;
+
       return (
         <motion.div 
           key={`timeline-${activeFlowId}`}
@@ -134,30 +160,138 @@ function App() {
             </button>
             <h2 className="flow-title">{flow.title}</h2>
           </div>
-          <div className="flow-card" style={{ padding: '2rem' }}>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '1.1rem' }}>{flow.description}</p>
-            <div className="timeline">
-              {flow.steps.map((item, i) => (
-                <div className="timeline-item" key={i}>
-                  <div className="timeline-dot"></div>
-                  <div className="timeline-content-box">
-                    <h4>{item.title}</h4>
-                    <p>{item.content}</p>
-                  </div>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{flow.description}</p>
+
+          <div className="h-timeline-container">
+            <div className="h-timeline-line"></div>
+            <div className="h-timeline-progress" style={{ width: `${progressWidth}%` }}></div>
+            
+            {flow.stages.map((stage, idx) => (
+              <div 
+                key={idx} 
+                className={`h-timeline-node ${idx === currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}
+                onClick={() => setCurrentStep(idx)}
+              >
+                <div className="h-timeline-dot"></div>
+                <div className="h-timeline-label">{stage.shortDesc}</div>
+              </div>
+            ))}
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="timeline-detail-card"
+            >
+              <div className="timeline-detail-icon">
+                {getIcon(activeStage.icon, { size: 32 })}
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--secondary)' }}>
+                  Stage {currentStep + 1}: {activeStage.title}
+                </h3>
+                <p style={{ fontSize: '1.1rem', lineHeight: '1.6', color: 'var(--text)' }}>
+                  {activeStage.content}
+                </p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="flow-navigation" style={{ marginTop: '3rem' }}>
+            <button className="btn-nav" onClick={handlePrevStep} disabled={currentStep === 0}>
+              <ChevronLeft size={20} /> Previous Stage
+            </button>
+            <button 
+              className="btn-nav" 
+              onClick={handleNextStep}
+              style={currentStep === flow.stages.length - 1 ? { backgroundColor: 'var(--secondary)', color: 'white' } : {}}
+            >
+              {currentStep === flow.stages.length - 1 ? 'Finish Timeline' : 'Next Stage'} <ChevronRight size={20} />
+            </button>
+          </div>
+        </motion.div>
+      );
+    }
+
+    // --- SCENARIO VIEW ---
+    if (flow.type === 'scenarios') {
+      if (!activeScenarioId) {
+        // Show scenario list
+        return (
+          <motion.div key="scenario-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flow-container">
+            <div className="flow-header">
+              <button className="back-btn" onClick={() => setActiveTab('home')} title="Back to menu"><ArrowLeft size={20} /></button>
+              <h2 className="flow-title">{flow.title}</h2>
+            </div>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{flow.description}</p>
+            
+            <div className="scenario-grid">
+              {flow.cases.map(sc => (
+                <div key={sc.id} className="scenario-card" onClick={() => { setActiveScenarioId(sc.id); setCurrentStep(0); }}>
+                  <div className="scenario-icon">{getIcon(sc.icon, { size: 28 })}</div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{sc.question}</h3>
+                  <ChevronRight style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
-               <button className="btn-nav" onClick={() => setActiveTab('home')}>
-                 Finish & Return Home
-               </button>
+          </motion.div>
+        );
+      }
+
+      // Show specific scenario steps
+      const scenario = flow.cases.find(c => c.id === activeScenarioId);
+      const step = scenario.steps[currentStep];
+      const totalSteps = scenario.steps.length;
+
+      return (
+        <motion.div key={`scenario-${activeScenarioId}-${currentStep}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flow-container">
+          <div className="flow-header">
+            <button className="back-btn" onClick={() => { setActiveScenarioId(null); setCurrentStep(0); }} title="Back to scenarios">
+              <ArrowLeft size={20} />
+            </button>
+            <h2 className="flow-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {getIcon(scenario.icon, { size: 24, color: 'var(--secondary)' })} {scenario.question}
+            </h2>
+          </div>
+          
+          <div className="progress-container">
+            <div className="progress-text">Outcome Step {currentStep + 1} of {totalSteps}</div>
+            <div className="progress-bar-bg">
+              <div className="progress-bar-fill" style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}></div>
+            </div>
+          </div>
+
+          <div className="flow-card">
+            <div className="scenario-step">
+              <div className="scenario-step-number">{currentStep + 1}</div>
+              <div>
+                <h2 style={{ marginBottom: '1rem', color: 'var(--primary)', marginTop: '0.2rem' }}>{step.title}</h2>
+                <div className="flow-content">{step.content}</div>
+              </div>
+            </div>
+            
+            <div className="flow-navigation">
+              <button className="btn-nav" onClick={handlePrevStep} disabled={currentStep === 0}>
+                <ChevronLeft size={20} /> Previous
+              </button>
+              <button 
+                className="btn-nav" 
+                onClick={handleNextStep}
+                style={currentStep === totalSteps - 1 ? { backgroundColor: 'var(--secondary)', color: 'white' } : {}}
+              >
+                {currentStep === totalSteps - 1 ? 'Explore Another Scenario' : 'What Happens Next?'} <ChevronRight size={20} />
+              </button>
             </div>
           </div>
         </motion.div>
       );
     }
 
-    // Render Step-by-Step Flow view
+    // --- STANDARD STEP-BY-STEP FLOW VIEW ---
     const step = flow.steps[currentStep];
     const totalSteps = flow.steps.length;
     const progressPercentage = ((currentStep + 1) / totalSteps) * 100;

@@ -5,6 +5,7 @@ export const contentData = {
       title: "Learn the Basics",
       description: "Understand what elections are and why they matter.",
       icon: "BookOpen",
+      type: "flow",
       steps: [
         {
           title: "What is an Election?",
@@ -31,6 +32,7 @@ export const contentData = {
       title: "Voting Process",
       description: "A step-by-step guide on how to register and cast your vote.",
       icon: "CheckSquare",
+      type: "flow",
       steps: [
         {
           title: "1. Registration",
@@ -60,30 +62,88 @@ export const contentData = {
     },
     timeline: {
       id: "timeline",
-      title: "Election Timeline",
-      description: "See the stages of an election from start to finish.",
+      title: "Interactive Timeline",
+      description: "Explore the stages of an election from start to finish.",
       icon: "Clock",
-      isTimeline: true,
-      steps: [
+      type: "timeline",
+      stages: [
         {
-          title: "1. Declaration & Primaries",
-          content: "Candidates announce they are running. In many systems, parties hold primary elections to choose their final nominee."
+          title: "Announcement",
+          shortDesc: "Election is called",
+          icon: "Megaphone",
+          content: "The election cycle officially begins when the governing body announces the dates and positions up for election. Candidates formally declare their intention to run."
         },
         {
-          title: "2. Campaigning",
-          content: "Candidates debate, hold rallies, and run advertisements to persuade voters. This is the most visible part of the election."
+          title: "Registration",
+          shortDesc: "Voters sign up",
+          icon: "UserPlus",
+          content: "Citizens must verify their eligibility and register to vote before a specified deadline. This ensures they are assigned to the correct polling location based on their address."
         },
         {
-          title: "3. Voter Registration Closes",
-          content: "The deadline passes for new voters to sign up for the upcoming election."
+          title: "Campaigning",
+          shortDesc: "Candidates debate",
+          icon: "Mic",
+          content: "Candidates present their platforms to the public. This period involves speeches, debates, advertisements, town halls, and rallies to persuade voters."
         },
         {
-          title: "4. Early Voting & Election Day",
-          content: "Voters cast their ballots. Election Day is the final day to submit a vote."
+          title: "Voting Day",
+          shortDesc: "Ballots are cast",
+          icon: "Vote",
+          content: "The designated day(s) when citizens go to polling stations to cast their ballots. In many places, early voting and mail-in voting happen before this final day."
         },
         {
-          title: "5. Vote Counting & Certification",
-          content: "Polls close and counting begins. After all valid ballots are tallied, the results are officially certified and winners are declared."
+          title: "Vote Counting",
+          shortDesc: "Tallying results",
+          icon: "Calculator",
+          content: "After polls close, election officials securely gather and count all valid ballots. This process is closely monitored by representatives from different parties to ensure fairness."
+        },
+        {
+          title: "Declaration",
+          shortDesc: "Winners announced",
+          icon: "Award",
+          content: "Once counting is complete and verified, the official results are certified and the winners are declared, completing the election cycle."
+        }
+      ]
+    },
+    scenarios: {
+      id: "scenarios",
+      title: "Scenario Simulator",
+      description: "Experience what happens in specific election situations.",
+      icon: "HelpCircle",
+      type: "scenarios",
+      cases: [
+        {
+          id: "no_vote",
+          question: "What happens if I don't vote?",
+          icon: "AlertTriangle",
+          steps: [
+            { title: "The Election Continues", content: "The election happens without your input. The total number of voters is slightly smaller." },
+            { title: "Others Decide", content: "Because you didn't cast a ballot, the people who did vote have a proportionally larger say in the outcome." },
+            { title: "Leaders Are Chosen", content: "Candidates are elected based only on the votes cast. They will now make decisions on laws, taxes, and services." },
+            { title: "The Impact", content: "You must live with the rules and leaders chosen by others, without having had a voice in the selection process." }
+          ]
+        },
+        {
+          id: "tie",
+          question: "What if a candidate gets equal votes?",
+          icon: "Scale",
+          steps: [
+            { title: "A Tie is Declared", content: "After all ballots (including mail-in and provisional) are counted and recounted, the candidates have the exact same number of votes." },
+            { title: "Checking the Law", content: "Election officials check the specific local or state laws, as tie-breaking rules vary by jurisdiction." },
+            { title: "Runoff or Random Chance", content: "In some places, a new 'runoff' election is scheduled between the two tied candidates. In others, the tie is broken by a game of chance, like drawing straws or flipping a coin!" },
+            { title: "Resolution", content: "The winner of the runoff or the random draw is officially declared the winner." }
+          ]
+        },
+        {
+          id: "counting",
+          question: "How exactly are votes counted?",
+          icon: "Calculator",
+          steps: [
+            { title: "Polls Close", content: "Once the official voting time ends, the doors are locked. Anyone already in line is usually allowed to vote." },
+            { title: "Securing Ballots", content: "Paper ballots are sealed in tamper-evident boxes. Electronic voting machines are locked down to prevent new entries." },
+            { title: "Tallying", content: "Ballots are transported to a central counting facility. Paper ballots are fed into optical scanners. Bipartisan teams monitor the process." },
+            { title: "Verification", content: "Mail-in ballots are verified by checking signatures against voter records before their inner envelope is opened and counted." }
+          ]
         }
       ]
     }
