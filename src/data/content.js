@@ -1,102 +1,101 @@
-export const electionContent = {
-  basics: {
-    title: "The Basics of Elections",
-    content: "An election is a formal group decision-making process where a population chooses an individual to hold public office. It's the core mechanism of democracy, allowing citizens to have a voice in who governs them and how their community, state, or country is run.",
-    followUp: "Would you like to learn about the steps to vote or see the full election timeline?",
-    options: [
-      { id: "voting_steps", label: "Voting Steps", icon: "CheckSquare" },
-      { id: "timeline", label: "Election Timeline", icon: "Clock" }
-    ]
+export const contentData = {
+  flows: {
+    basics: {
+      id: "basics",
+      title: "Learn the Basics",
+      description: "Understand what elections are and why they matter.",
+      icon: "BookOpen",
+      steps: [
+        {
+          title: "What is an Election?",
+          content: "An election is a formal decision-making process where citizens choose individuals to hold public office. It's the core mechanism of democracy.",
+          simplified: "An election is how people pick their leaders by voting.",
+          expanded: "Elections are the foundation of representative democracy. They provide a peaceful way to transfer power and allow citizens to hold leaders accountable. Without elections, governments would not be bound to the will of the people."
+        },
+        {
+          title: "Why it Matters",
+          content: "Voting gives you a voice in how your community, state, and country are governed. It directly affects laws, taxes, and public services.",
+          simplified: "Voting lets you decide what rules and leaders you want in your town or country.",
+          expanded: "Elections determine policies on education, healthcare, infrastructure, and the economy. Even local elections (like for mayor or school board) have a massive impact on your daily life, as they control local budgets and community rules."
+        },
+        {
+          title: "Levels of Government",
+          content: "Elections happen at multiple levels: local (mayor, city council), state (governor, state legislature), and national (president, congress).",
+          simplified: "You vote for local leaders (like mayors), state leaders, and country leaders (like presidents).",
+          expanded: "Different levels of government handle different responsibilities. Local governments manage police, fire, and sanitation. State governments handle highways and state laws. The national government handles defense, foreign policy, and federal laws. You have representatives at each level."
+        }
+      ]
+    },
+    voting: {
+      id: "voting",
+      title: "Voting Process",
+      description: "A step-by-step guide on how to register and cast your vote.",
+      icon: "CheckSquare",
+      steps: [
+        {
+          title: "1. Registration",
+          content: "Before voting, you must register. This proves your eligibility and ensures you vote in the correct district.",
+          simplified: "You need to sign up before you can vote so the government knows you are eligible.",
+          expanded: "Voter registration prevents voter fraud by ensuring each eligible citizen only votes once. You typically need a government-issued ID and proof of address. Deadlines to register are often 15-30 days before the election, though some places offer same-day registration."
+        },
+        {
+          title: "2. Preparation",
+          content: "Research the candidates and issues on your ballot before Election Day. Non-partisan voter guides are excellent resources.",
+          simplified: "Learn about the people and rules you are voting for before you actually vote.",
+          expanded: "You can usually view a 'sample ballot' online before the election. This shows exactly what your ballot will look like. It's best practice to research each candidate's platform and understand any propositions or measures, as the legal wording on the ballot can be confusing."
+        },
+        {
+          title: "3. Casting Your Vote",
+          content: "Go to your designated polling place to vote in person, or fill out and mail in an absentee/mail-in ballot if allowed.",
+          simplified: "Go to a polling place to vote on a machine or paper, or mail your vote if you can.",
+          expanded: "If voting in person, you'll check in with election workers, possibly show ID, and receive a ballot. You will vote in a private booth. If voting by mail, you must follow the instructions carefully (like signing the outer envelope) and return it before the deadline."
+        },
+        {
+          title: "4. Confirmation",
+          content: "After voting, your ballot is securely collected. If you voted by mail, you can often track your ballot's status online.",
+          simplified: "Once you vote, your ballot is kept safe until it's time to count.",
+          expanded: "Election security is strict. Ballots are kept in locked, sealed containers. For mail-in voting, many states offer online tracking systems where you can see when your ballot was mailed to you, received back, and accepted for counting."
+        }
+      ]
+    },
+    timeline: {
+      id: "timeline",
+      title: "Election Timeline",
+      description: "See the stages of an election from start to finish.",
+      icon: "Clock",
+      isTimeline: true,
+      steps: [
+        {
+          title: "1. Declaration & Primaries",
+          content: "Candidates announce they are running. In many systems, parties hold primary elections to choose their final nominee."
+        },
+        {
+          title: "2. Campaigning",
+          content: "Candidates debate, hold rallies, and run advertisements to persuade voters. This is the most visible part of the election."
+        },
+        {
+          title: "3. Voter Registration Closes",
+          content: "The deadline passes for new voters to sign up for the upcoming election."
+        },
+        {
+          title: "4. Early Voting & Election Day",
+          content: "Voters cast their ballots. Election Day is the final day to submit a vote."
+        },
+        {
+          title: "5. Vote Counting & Certification",
+          content: "Polls close and counting begins. After all valid ballots are tallied, the results are officially certified and winners are declared."
+        }
+      ]
+    }
   },
-  voting_steps: {
-    title: "How to Vote (Step-by-Step)",
-    content: "Voting usually involves three main steps:\n\n1. Registration: You must register to vote before the election. This verifies your eligibility.\n2. Preparation: Research the candidates and issues on the ballot.\n3. Casting your ballot: Go to your polling place on election day, or submit a mail-in/absentee ballot if allowed.",
-    followUp: "Do you want to know what happens during the counting process?",
-    options: [
-      { id: "counting", label: "How Votes are Counted", icon: "Calculator" },
-      { id: "timeline", label: "View Full Timeline", icon: "Clock" }
-    ]
-  },
-  timeline: {
-    title: "The Election Timeline",
-    content: "A typical election follows this path:",
-    isTimeline: true,
-    timelineData: [
-      { step: "1. Registration", desc: "Citizens sign up to be eligible voters." },
-      { step: "2. Campaigning", desc: "Candidates present their platforms and debate issues." },
-      { step: "3. Election Day", desc: "Voters cast their ballots at polling stations or via mail." },
-      { step: "4. Vote Counting", desc: "Ballots are securely collected and tallied by election officials." },
-      { step: "5. Results Declaration", desc: "Official winners are announced after certification." }
-    ],
-    followUp: "What specific part of this timeline would you like to explore?",
-    options: [
-      { id: "campaigning", label: "Campaigning", icon: "Megaphone" },
-      { id: "counting", label: "Vote Counting", icon: "Calculator" }
-    ]
-  },
-  campaigning: {
-    title: "Campaigning",
-    content: "During the campaign period, candidates try to persuade voters to support them. They do this through speeches, debates, advertisements, town halls, and speaking directly with citizens to explain their proposed policies and vision.",
-    followUp: "Want to explore another topic?",
-    options: [
-      { id: "basics", label: "Back to Basics", icon: "BookOpen" },
-      { id: "voting_steps", label: "How to Vote", icon: "CheckSquare" }
-    ]
-  },
-  counting: {
-    title: "How Votes are Counted",
-    content: "Once voting ends, ballots are securely transported and counted. This is often done using optical scanners for paper ballots or direct recording electronic machines. Bipartisan election workers and observers monitor the process to ensure accuracy and fairness. Provisional and mail-in ballots are verified before being counted.",
-    followUp: "Did this help clarify the process?",
-    options: [
-      { id: "scenarios", label: "Explore Scenarios", icon: "HelpCircle" },
-      { id: "basics", label: "Start Over", icon: "Home" }
-    ]
-  },
-  scenarios: {
-    title: "Common Scenarios",
-    content: "Let's explore some common questions about the voting process.",
-    followUp: "Choose a scenario to learn more:",
-    options: [
-      { id: "scenario_novote", label: "What if I don't vote?", icon: "AlertTriangle" },
-      { id: "scenario_tie", label: "What happens in a tie?", icon: "Scale" }
-    ]
-  },
-  scenario_novote: {
-    title: "What happens if I don't vote?",
-    content: "If you don't vote, you let others decide who will represent you and make laws that affect your life. While voting is not legally required in most democratic systems, it is the primary way citizens hold their leaders accountable and influence public policy.",
-    followUp: "Want to explore more?",
-    options: [
-      { id: "scenarios", label: "Other Scenarios", icon: "HelpCircle" },
-      { id: "timeline", label: "View Timeline", icon: "Clock" }
-    ]
-  },
-  scenario_tie: {
-    title: "What happens in a tie?",
-    content: "Rules for tied elections vary by jurisdiction. Sometimes a run-off election is held between the tied candidates. In other places, ties might be broken by drawing lots (like flipping a coin or pulling a name from a hat), or the decision might be made by a legislative body.",
-    followUp: "Want to explore more?",
-    options: [
-      { id: "scenarios", label: "Other Scenarios", icon: "HelpCircle" },
-      { id: "timeline", label: "View Timeline", icon: "Clock" }
-    ]
-  },
-  welcome: {
-    title: "Welcome to CivicGuide AI",
-    content: "Hello! I am your civic assistant, designed to help you understand the election process in a simple and clear way.",
-    followUp: "What would you like to learn about elections today?",
-    options: [
-      { id: "basics", label: "Learn the Basics", icon: "BookOpen" },
-      { id: "voting_steps", label: "Voting Process", icon: "CheckSquare" },
-      { id: "timeline", label: "Election Timeline", icon: "Clock" },
-      { id: "scenarios", label: "Common Scenarios", icon: "HelpCircle" }
-    ]
-  },
-  fallback: {
-    title: "I'm still learning",
-    content: "I'm designed to focus specifically on educational information about the election process. I don't have information on specific candidates, political parties, or current political events to remain completely neutral.",
-    followUp: "Let's get back to learning about the process. What interests you?",
-    options: [
-      { id: "basics", label: "Learn the Basics", icon: "BookOpen" },
-      { id: "timeline", label: "Election Timeline", icon: "Clock" }
-    ]
+  chat: {
+    welcome: "Hello! I am your CivicGuide AI. You can ask me questions about elections, like 'What happens in a tie?' or 'How are votes counted?'.",
+    fallback: "I'm designed to focus specifically on educational information about the election process. I don't have information on specific candidates, political parties, or current political events to remain completely neutral.",
+    scenarios: {
+      "tie": "Rules for tied elections vary. Sometimes a run-off election is held between the tied candidates. In other places, ties might be broken by drawing lots (like flipping a coin) or by a legislative vote.",
+      "novote": "If you don't vote, you let others decide who will represent you. While not legally required in most places, voting is the primary way citizens hold leaders accountable.",
+      "count": "Votes are counted using optical scanners or electronic machines, monitored by bipartisan workers. Provisional and mail-in ballots are verified first.",
+      "fraud": "Election systems have multiple layers of security, including paper trails, signature verification, bipartisian poll workers, and post-election audits to prevent fraud."
+    }
   }
 };
