@@ -7,6 +7,7 @@ export const contentData = {
       icon: "BookOpen",
       type: "flow",
       suggestedNext: "voting",
+      quizId: "basics",
       steps: [
         {
           title: "What is an Election?",
@@ -36,6 +37,7 @@ export const contentData = {
       type: "flow",
       suggestedNext: "timeline",
       suggestedScenario: "no_vote",
+      quizId: "voting",
       steps: [
         {
           title: "1. Registration",
@@ -70,6 +72,7 @@ export const contentData = {
       icon: "Clock",
       type: "timeline",
       suggestedScenario: "counting",
+      quizId: "timeline",
       stages: [
         {
           title: "Announcement",
@@ -115,6 +118,7 @@ export const contentData = {
       description: "Experience what happens in specific election situations.",
       icon: "HelpCircle",
       type: "scenarios",
+      quizId: "scenarios",
       cases: [
         {
           id: "no_vote",
@@ -151,6 +155,88 @@ export const contentData = {
         }
       ]
     }
+  },
+  quizzes: {
+    basics: [
+      {
+        question: "What is the primary purpose of an election in a democracy?",
+        options: ["To raise taxes", "To choose individuals for public office", "To enforce laws", "To build infrastructure"],
+        correctAnswer: 1,
+        explanation: "Elections are the formal decision-making process where citizens choose their leaders to hold public office."
+      },
+      {
+        question: "True or False: Elections only happen at the national level (e.g., for President).",
+        options: ["True", "False"],
+        correctAnswer: 1,
+        explanation: "False. Elections happen at local, state, and national levels."
+      },
+      {
+        question: "Why do local elections matter?",
+        options: ["They decide national defense policy", "They control the national budget", "They manage local budgets and community rules like schools and sanitation", "They don't matter much"],
+        correctAnswer: 2,
+        explanation: "Local elections directly affect your daily life through schools, police, and sanitation management."
+      }
+    ],
+    voting: [
+      {
+        question: "What is the very first step you must take before you can vote?",
+        options: ["Watch a debate", "Register to vote", "Go to a polling place", "Donate to a campaign"],
+        correctAnswer: 1,
+        explanation: "You must register to vote first to prove your eligibility and get assigned to the correct district."
+      },
+      {
+        question: "Why do we have voter registration?",
+        options: ["To prevent voter fraud and ensure each eligible citizen votes only once", "To charge a voting fee", "To collect email addresses", "To assign political parties"],
+        correctAnswer: 0,
+        explanation: "Voter registration is a security measure to prevent fraud and maintain accurate voter rolls."
+      },
+      {
+        question: "True or False: Once you vote by mail, the ballot is immediately thrown away.",
+        options: ["True", "False"],
+        correctAnswer: 1,
+        explanation: "False! Ballots are securely collected, often trackable online, and carefully counted by officials."
+      }
+    ],
+    timeline: [
+      {
+        question: "Which stage comes first in an election cycle?",
+        options: ["Campaigning", "Voting Day", "Announcement & Declaration", "Vote Counting"],
+        correctAnswer: 2,
+        explanation: "The cycle officially begins when the election is announced and candidates declare their intent to run."
+      },
+      {
+        question: "During which period do candidates hold rallies, debate, and run advertisements?",
+        options: ["Registration", "Campaigning", "Vote Counting", "Declaration"],
+        correctAnswer: 1,
+        explanation: "This happens during the Campaigning stage, where candidates try to persuade voters."
+      },
+      {
+        question: "Who monitors the vote counting process?",
+        options: ["Only the winning candidate", "No one, it is done in secret", "Representatives from different parties and bipartisan workers", "The police"],
+        correctAnswer: 2,
+        explanation: "To ensure fairness, vote counting is closely monitored by representatives from multiple parties."
+      }
+    ],
+    scenarios: [
+      {
+        question: "If you choose not to vote, what happens?",
+        options: ["The election is canceled", "You get fined", "Others decide who will represent you", "The government shuts down"],
+        correctAnswer: 2,
+        explanation: "The election continues, and the people who did vote have a larger say in deciding the winner."
+      },
+      {
+        question: "What might happen if two candidates tie?",
+        options: ["They share the job", "A runoff election is held or a random draw occurs", "The election is canceled forever", "The youngest candidate wins"],
+        correctAnswer: 1,
+        explanation: "Depending on local laws, ties are usually broken by a runoff election or a game of chance (like flipping a coin)."
+      },
+      {
+        question: "What happens if you are in line to vote when the polls officially close?",
+        options: ["You are told to go home", "Your vote won't count", "You are usually allowed to stay in line and vote", "You have to mail your vote instead"],
+        correctAnswer: 2,
+        explanation: "In most jurisdictions, anyone already in line when polls close is allowed to cast their ballot."
+      }
+    ]
   },
   chat: {
     welcome: "Hello! I am your CivicGuide AI. You can ask me questions about elections, like 'What happens in a tie?' or 'How are votes counted?'.",

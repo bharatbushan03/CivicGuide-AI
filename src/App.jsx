@@ -4,7 +4,7 @@ import {
   ChevronRight, ChevronLeft, MinusCircle, PlusCircle,
   Home, Send, ArrowLeft, Megaphone, UserPlus, Mic, 
   Vote, Calculator, Award, HelpCircle, AlertTriangle, Scale,
-  PlayCircle
+  PlayCircle, CheckCircle, XCircle, Trophy, Target
 } from 'lucide-react';
 import { contentData } from './data/content';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,7 +35,9 @@ const useProfile = () => {
     return {
       knowledgeLevel: 'normal',
       exploredTopics: [],
-      lastPosition: null
+      lastPosition: null,
+      badges: [],
+      quizScores: {}
     };
   });
 
@@ -49,12 +51,22 @@ const useProfile = () => {
 function App() {
   const [profile, setProfile] = useProfile();
   
-  const [activeTab, setActiveTab] = useState('home'); // 'home', 'flow', 'chat'
+  const [activeTab, setActiveTab] = useState('home'); // 'home', 'flow', 'chat', 'quiz'
   const [activeFlowId, setActiveFlowId] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [explanationDepth, setExplanationDepth] = useState(profile.knowledgeLevel); 
   const [activeScenarioId, setActiveScenarioId] = useState(null);
   
+  // Quiz state
+  const [quizState, setQuizState] = useState({
+    activeQuizId: null,
+    currentQuestionIdx: 0,
+    selectedOption: null,
+    hasAnswered: false,
+    score: 0,
+    showResults: false
+  });
+
   // Chat state
   const [chatHistory, setChatHistory] = useState([
     { type: 'bot', text: contentData.chat.welcome }
@@ -87,6 +99,41 @@ function App() {
     }));
   };
 
+  const startQuiz = (quizId) => {
+    setQuizState({
+      activeQuizId: quizId,
+      currentQuestionIdx: 0,
+      selectedOption: null,
+      hasAnswered: false,
+      score: 0,
+      showResults: false
+    });
+    setActiveTab('quiz');
+  };
+
+  const checkAndAwardBadges = (scores, explored) => {
+    const newBadges = [...(profile.badges || [])];
+    
+    // Check Civic Scholar (Basics)
+    if (!newBadges.includes('civic_scholar') && scores['basics'] === 3 && explored.includes('basics')) {
+      newBadges.push('civic_scholar');
+    }
+    // Check Voting Expert
+    if (!newBadges.includes('voting_expert') && scores['voting'] === 3 && explored.includes('voting')) {
+      newBadges.push('voting_expert');
+    }
+    // Check Timeline Master
+    if (!newBadges.includes('timeline_master') && scores['timeline'] === 3 && explored.includes('timeline')) {
+      newBadges.push('timeline_master');
+    }
+    // Check Scenario Solver
+    if (!newBadges.includes('scenario_solver') && scores['scenarios'] === 3) {
+      newBadges.push('scenario_solver');
+    }
+
+    return newBadges;
+  };
+
   const handleNextStep = () => {
     const flow = contentData.flows[activeFlowId];
     let maxSteps = 0;
@@ -107,7 +154,7 @@ function App() {
         lastPosition: { flowId: activeFlowId, step: nextStep, scenarioId: activeScenarioId }
       }));
     } else {
-      // Finished!
+      // Finished Flow!
       setProfile(prev => {
         const newExplored = [...prev.exploredTopics];
         if (!newExplored.includes(activeFlowId)) newExplored.push(activeFlowId);
@@ -117,7 +164,9 @@ function App() {
         return { ...prev, exploredTopics: newExplored, lastPosition: null };
       });
 
-      if (flow.type === 'scenarios' && activeScenarioId) {
+      if (flow.quizId) {
+        startQuiz(flow.quizId);
+      } else if (flow.type === 'scenarios' && activeScenarioId) {
         setActiveScenarioId(null);
         setCurrentStep(0);
       } else {
@@ -141,6 +190,42 @@ function App() {
 
   const goHome = () => {
     setActiveTab('home');
+  };
+
+  const handleQuizAnswer = (optionIdx) => {
+    if (quizState.hasAnswered) return;
+
+    const quiz = contentData.quizzes[quizState.activeQuizId];
+    const question = quiz[quizState.currentQuestionIdx];
+    const isCorrect = optionIdx === question.correctAnswer;
+
+    setQuizState(prev => ({
+      ...prev,
+      selectedOption: optionIdx,
+      hasAnswered: true,
+      score: isCorrect ? prev.score + 1 : prev.score
+    }));
+  };
+
+  const handleNextQuizQuestion = () => {
+    const quiz = contentData.quizzes[quizState.activeQuizId];
+    if (quizState.currentQuestionIdx < quiz.length - 1) {
+      setQuizState(prev => ({
+        ...prev,
+        currentQuestionIdx: prev.currentQuestionIdx + 1,
+        selectedOption: null,
+        hasAnswered: false
+      }));
+    } else {
+      // Finish Quiz
+      setQuizState(prev => ({ ...prev, showResults: true }));
+      
+      setProfile(prev => {
+        const newScores = { ...prev.quizScores, [quizState.activeQuizId]: quizState.score };
+        const newBadges = checkAndAwardBadges(newScores, prev.exploredTopics);
+        return { ...prev, quizScores: newScores, badges: newBadges };
+      });
+    }
   };
 
   const handleTextSubmit = (e) => {
@@ -174,6 +259,7 @@ function App() {
 
   const renderHome = () => {
     const recommendedFlowId = getRecommendedFlow();
+    const badges = profile.badges || [];
 
     return (
       <motion.div 
@@ -197,16 +283,37 @@ function App() {
           </div>
         )}
 
+        {badges.length > 0 && (
+          <>
+            <h2 className="section-title">Your Achievements</h2>
+            <div className="badges-container">
+              <div className={`badge-item ${badges.includes('civic_scholar') ? 'earned' : ''}`}>
+                <BookOpen size={16} className="badge-icon" /> Civic Scholar
+              </div>
+              <div className={`badge-item ${badges.includes('voting_expert') ? 'earned' : ''}`}>
+                <CheckSquare size={16} className="badge-icon" /> Voting Expert
+              </div>
+              <div className={`badge-item ${badges.includes('timeline_master') ? 'earned' : ''}`}>
+                <Clock size={16} className="badge-icon" /> Timeline Master
+              </div>
+              <div className={`badge-item ${badges.includes('scenario_solver') ? 'earned' : ''}`}>
+                <Target size={16} className="badge-icon" /> Scenario Solver
+              </div>
+            </div>
+          </>
+        )}
+
         {recommendedFlowId && (
           <h2 className="section-title">Recommended for You</h2>
         )}
         <div className="home-grid">
           {Object.values(contentData.flows).map(flow => {
             const isRecommended = flow.id === recommendedFlowId;
+            const isCompleted = profile.exploredTopics.includes(flow.id);
             return (
               <div 
                 key={flow.id} 
-                className={`home-card ${isRecommended ? 'recommended' : ''}`} 
+                className={`home-card ${isRecommended ? 'recommended' : ''} ${isCompleted ? 'completed' : ''}`} 
                 onClick={() => startFlow(flow.id)}
               >
                 <div className="home-card-icon">
@@ -223,6 +330,120 @@ function App() {
             </div>
             <h3>Ask a Question</h3>
             <p>Chat directly with CivicGuide AI for specific queries.</p>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const renderQuiz = () => {
+    const quiz = contentData.quizzes[quizState.activeQuizId];
+    const flowTitle = contentData.flows[quizState.activeQuizId]?.title || "Topic";
+
+    if (quizState.showResults) {
+      const accuracy = Math.round((quizState.score / quiz.length) * 100);
+      let feedbackMsg = "Great job! Want to try a harder challenge next?";
+      if (accuracy < 60) feedbackMsg = "Good effort! Consider revisiting this topic to strengthen your knowledge.";
+      
+      return (
+        <motion.div key="quiz-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flow-container">
+          <div className="flow-header">
+            <h2 className="flow-title">Quiz Results: {flowTitle}</h2>
+          </div>
+          <div className="flow-card quiz-results">
+            <Trophy size={64} color="var(--warning)" style={{ marginBottom: '1rem' }} />
+            <h2>Assessment Complete!</h2>
+            
+            <div className="score-circle">
+              {quizState.score}
+              <span>out of {quiz.length}</span>
+            </div>
+            
+            <p style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Accuracy: {accuracy}%</p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '3rem' }}>{feedbackMsg}</p>
+            
+            <div className="flow-navigation" style={{ justifyContent: 'center', gap: '1rem' }}>
+               <button className="btn-nav" onClick={() => startQuiz(quizState.activeQuizId)}>
+                 Retry Quiz
+               </button>
+               <button className="btn-nav action" onClick={goHome}>
+                 Return Home
+               </button>
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
+
+    const question = quiz[quizState.currentQuestionIdx];
+
+    return (
+      <motion.div key={`quiz-${quizState.currentQuestionIdx}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flow-container">
+        <div className="flow-header">
+          <button className="back-btn" onClick={goHome} title="Exit Quiz"><ArrowLeft size={20} /></button>
+          <h2 className="flow-title">{flowTitle} Knowledge Check</h2>
+        </div>
+
+        <div className="progress-container">
+          <div className="progress-text">Question {quizState.currentQuestionIdx + 1} of {quiz.length}</div>
+          <div className="progress-bar-bg">
+            <div className="progress-bar-fill" style={{ width: `${((quizState.currentQuestionIdx + 1) / quiz.length) * 100}%` }}></div>
+          </div>
+        </div>
+
+        <div className="flow-card">
+          <h2 style={{ color: 'var(--text)' }}>{question.question}</h2>
+          
+          <div className="quiz-options">
+            {question.options.map((opt, idx) => {
+              let className = "quiz-option";
+              if (quizState.hasAnswered) {
+                if (idx === question.correctAnswer) className += " correct";
+                else if (idx === quizState.selectedOption) className += " incorrect";
+              } else if (idx === quizState.selectedOption) {
+                className += " selected";
+              }
+
+              return (
+                <button 
+                  key={idx} 
+                  className={className}
+                  onClick={() => handleQuizAnswer(idx)}
+                  disabled={quizState.hasAnswered}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+
+          {quizState.hasAnswered && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              className={`quiz-feedback ${quizState.selectedOption === question.correctAnswer ? 'success' : 'error'}`}
+            >
+              <div className="quiz-feedback-icon">
+                {quizState.selectedOption === question.correctAnswer ? <CheckCircle size={24} /> : <XCircle size={24} />}
+              </div>
+              <div>
+                <h4 style={{ marginBottom: '0.25rem', color: 'inherit' }}>
+                  {quizState.selectedOption === question.correctAnswer ? "Correct!" : "Incorrect"}
+                </h4>
+                <p style={{ margin: 0 }}>{question.explanation}</p>
+              </div>
+            </motion.div>
+          )}
+
+          <div className="flow-navigation" style={{ marginTop: '3rem' }}>
+            <div></div> {/* spacer */}
+            <button 
+              className="btn-nav action" 
+              onClick={handleNextQuizQuestion}
+              disabled={!quizState.hasAnswered}
+            >
+              {quizState.currentQuestionIdx === quiz.length - 1 ? 'See Results' : 'Next Question'} <ChevronRight size={20} />
+            </button>
           </div>
         </div>
       </motion.div>
@@ -306,11 +527,10 @@ function App() {
                 </button>
               )}
               <button 
-                className="btn-nav" 
+                className={`btn-nav ${currentStep === flow.stages.length - 1 ? 'action' : ''}`} 
                 onClick={handleNextStep}
-                style={currentStep === flow.stages.length - 1 ? { backgroundColor: 'var(--secondary)', color: 'white' } : {}}
               >
-                {currentStep === flow.stages.length - 1 ? 'Finish Timeline' : 'Next Stage'} <ChevronRight size={20} />
+                {currentStep === flow.stages.length - 1 ? (flow.quizId ? 'Take Quiz' : 'Finish') : 'Next Stage'} <ChevronRight size={20} />
               </button>
             </div>
           </div>
@@ -345,6 +565,15 @@ function App() {
                 </div>
               ))}
             </div>
+            
+            {/* If all scenarios explored, offer the quiz */}
+            {profile.exploredTopics.filter(t => t.startsWith('scenario_')).length >= 2 && (
+              <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                 <button className="btn-nav action" style={{ margin: '0 auto' }} onClick={() => startQuiz('scenarios')}>
+                   Test Your Scenario Knowledge
+                 </button>
+              </div>
+            )}
           </motion.div>
         );
       }
@@ -386,9 +615,8 @@ function App() {
                 <ChevronLeft size={20} /> Previous
               </button>
               <button 
-                className="btn-nav" 
+                className={`btn-nav ${currentStep === totalSteps - 1 ? 'action' : ''}`} 
                 onClick={handleNextStep}
-                style={currentStep === totalSteps - 1 ? { backgroundColor: 'var(--secondary)', color: 'white' } : {}}
               >
                 {currentStep === totalSteps - 1 ? 'Finish Scenario' : 'What Happens Next?'} <ChevronRight size={20} />
               </button>
@@ -487,11 +715,10 @@ function App() {
                  </button>
                )}
                <button 
-                 className="btn-nav" 
+                 className={`btn-nav ${currentStep === totalSteps - 1 ? 'action' : ''}`} 
                  onClick={handleNextStep}
-                 style={currentStep === totalSteps - 1 ? { backgroundColor: 'var(--secondary)', color: 'white' } : {}}
                >
-                 {currentStep === totalSteps - 1 ? 'Finish Flow' : 'Next Step'} <ChevronRight size={20} />
+                 {currentStep === totalSteps - 1 ? (flow.quizId ? 'Take Quiz' : 'Finish') : 'Next Step'} <ChevronRight size={20} />
                </button>
             </div>
           </div>
@@ -589,6 +816,7 @@ function App() {
           <AnimatePresence mode="wait">
             {activeTab === 'home' && renderHome()}
             {activeTab === 'flow' && renderFlow()}
+            {activeTab === 'quiz' && renderQuiz()}
             {activeTab === 'chat' && renderChat()}
           </AnimatePresence>
         </main>
