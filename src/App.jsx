@@ -4,9 +4,10 @@ import {
   ChevronRight, ChevronLeft, MinusCircle, PlusCircle,
   Home, Send, ArrowLeft, Megaphone, UserPlus, Mic, 
   Vote, Calculator, Award, HelpCircle, AlertTriangle, Scale,
-  PlayCircle, CheckCircle, XCircle, Trophy, Target
+  PlayCircle, CheckCircle, XCircle, Trophy, Target, Globe, Loader, Calendar, RefreshCcw
 } from 'lucide-react';
 import { contentData } from './data/content';
+import { fetchUpcomingElections } from './data/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const getIcon = (iconName, props = { size: 32 }) => {
@@ -37,7 +38,8 @@ const useProfile = () => {
       exploredTopics: [],
       lastPosition: null,
       badges: [],
-      quizScores: {}
+      quizScores: {},
+      language: 'en'
     };
   });
 
@@ -50,6 +52,8 @@ const useProfile = () => {
 
 function App() {
   const [profile, setProfile] = useProfile();
+  const lang = profile.language || 'en';
+  const t = contentData[lang] || contentData['en'];
   
   const [activeTab, setActiveTab] = useState('home'); // 'home', 'flow', 'chat', 'quiz'
   const [activeFlowId, setActiveFlowId] = useState(null);
@@ -57,6 +61,11 @@ function App() {
   const [explanationDepth, setExplanationDepth] = useState(profile.knowledgeLevel); 
   const [activeScenarioId, setActiveScenarioId] = useState(null);
   
+  // Real-time Data State
+  const [elections, setElections] = useState(null);
+  const [electionsLoading, setElectionsLoading] = useState(true);
+  const [electionsError, setElectionsError] = useState(false);
+
   // Quiz state
   const [quizState, setQuizState] = useState({
     activeQuizId: null,
@@ -69,17 +78,45 @@ function App() {
 
   // Chat state
   const [chatHistory, setChatHistory] = useState([
-    { type: 'bot', text: contentData.chat.welcome }
+    { type: 'bot', text: t.chat.welcome }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
+    loadElections();
+  }, [lang]);
+
+  useEffect(() => {
+    // Reset welcome message on language change if it's the only message
+    if (chatHistory.length === 1 && chatHistory[0].type === 'bot') {
+       setChatHistory([{ type: 'bot', text: t.chat.welcome }]);
+    }
+  }, [lang]);
+
+  useEffect(() => {
     if (activeTab === 'chat' && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatHistory, isTyping, activeTab]);
+
+  const loadElections = async () => {
+    setElectionsLoading(true);
+    setElectionsError(false);
+    try {
+      const data = await fetchUpcomingElections(lang);
+      setElections(data);
+    } catch (err) {
+      setElectionsError(true);
+    } finally {
+      setElectionsLoading(false);
+    }
+  };
+
+  const toggleLanguage = () => {
+    setProfile(prev => ({ ...prev, language: prev.language === 'en' ? 'hi' : 'en' }));
+  };
 
   const updateProfileKnowledge = (depth) => {
     setExplanationDepth(depth);
@@ -114,19 +151,15 @@ function App() {
   const checkAndAwardBadges = (scores, explored) => {
     const newBadges = [...(profile.badges || [])];
     
-    // Check Civic Scholar (Basics)
     if (!newBadges.includes('civic_scholar') && scores['basics'] === 3 && explored.includes('basics')) {
       newBadges.push('civic_scholar');
     }
-    // Check Voting Expert
     if (!newBadges.includes('voting_expert') && scores['voting'] === 3 && explored.includes('voting')) {
       newBadges.push('voting_expert');
     }
-    // Check Timeline Master
     if (!newBadges.includes('timeline_master') && scores['timeline'] === 3 && explored.includes('timeline')) {
       newBadges.push('timeline_master');
     }
-    // Check Scenario Solver
     if (!newBadges.includes('scenario_solver') && scores['scenarios'] === 3) {
       newBadges.push('scenario_solver');
     }
@@ -135,7 +168,7 @@ function App() {
   };
 
   const handleNextStep = () => {
-    const flow = contentData.flows[activeFlowId];
+    const flow = t.flows[activeFlowId];
     let maxSteps = 0;
     
     if (flow.type === 'flow') maxSteps = flow.steps.length;
@@ -195,7 +228,7 @@ function App() {
   const handleQuizAnswer = (optionIdx) => {
     if (quizState.hasAnswered) return;
 
-    const quiz = contentData.quizzes[quizState.activeQuizId];
+    const quiz = t.quizzes[quizState.activeQuizId];
     const question = quiz[quizState.currentQuestionIdx];
     const isCorrect = optionIdx === question.correctAnswer;
 
@@ -208,7 +241,7 @@ function App() {
   };
 
   const handleNextQuizQuestion = () => {
-    const quiz = contentData.quizzes[quizState.activeQuizId];
+    const quiz = t.quizzes[quizState.activeQuizId];
     if (quizState.currentQuestionIdx < quiz.length - 1) {
       setQuizState(prev => ({
         ...prev,
@@ -238,11 +271,11 @@ function App() {
     setIsTyping(true);
 
     setTimeout(() => {
-      let botResponse = contentData.chat.fallback;
-      if (userText.includes('tie')) botResponse = contentData.chat.scenarios.tie;
-      else if (userText.includes('not vote') || userText.includes("don't vote") || userText.includes("dont vote")) botResponse = contentData.chat.scenarios.novote;
-      else if (userText.includes('count')) botResponse = contentData.chat.scenarios.count;
-      else if (userText.includes('fraud') || userText.includes('safe') || userText.includes('secure')) botResponse = contentData.chat.scenarios.fraud;
+      let botResponse = t.chat.fallback;
+      if (userText.includes('tie') || userText.includes('टाई')) botResponse = t.chat.scenarios.tie;
+      else if (userText.includes('not vote') || userText.includes('वोट नहीं') || userText.includes("dont vote")) botResponse = t.chat.scenarios.novote;
+      else if (userText.includes('count') || userText.includes('गिनती')) botResponse = t.chat.scenarios.count;
+      else if (userText.includes('fraud') || userText.includes('safe') || userText.includes('धोखाधड़ी')) botResponse = t.chat.scenarios.fraud;
 
       setChatHistory(prev => [...prev, { type: 'bot', text: botResponse }]);
       setIsTyping(false);
@@ -267,107 +300,140 @@ function App() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
+        role="main"
+        aria-label={t.ui.home}
       >
         {profile.lastPosition && (
-          <div className="resume-banner">
+          <div className="resume-banner" role="region" aria-label="Resume learning">
             <div className="resume-content">
-              <h3>Pick up where you left off</h3>
-              <p>Continue your journey in {contentData.flows[profile.lastPosition.flowId].title}</p>
+              <h3>{t.ui.resumeBannerTitle}</h3>
+              <p>{t.ui.resumeBannerDesc} {t.flows[profile.lastPosition.flowId].title}</p>
             </div>
             <button 
               className="resume-btn"
               onClick={() => startFlow(profile.lastPosition.flowId, profile.lastPosition.step, profile.lastPosition.scenarioId)}
+              aria-label={`Resume ${t.flows[profile.lastPosition.flowId].title}`}
             >
-              <PlayCircle size={20} /> Resume
+              <PlayCircle size={20} aria-hidden="true" /> {t.ui.resumeBtn}
             </button>
           </div>
         )}
 
+        <h2 className="section-title">{t.ui.upcomingElections}</h2>
+        <div className="elections-widget" role="region" aria-live="polite">
+          {electionsLoading && <div className="widget-status"><Loader className="spinner" size={24} /> {t.ui.loading}</div>}
+          {electionsError && (
+             <div className="widget-status error">
+               <AlertTriangle size={24} /> {t.ui.errorLoading} 
+               <button className="text-btn" onClick={loadElections}><RefreshCcw size={16}/> {t.ui.retry}</button>
+             </div>
+          )}
+          {elections && !electionsLoading && !electionsError && (
+            <div className="elections-list">
+              {elections.map(election => (
+                <div key={election.id} className="election-item">
+                  <div className="election-date">
+                    <Calendar size={20} className="icon-cal" />
+                    <span>{new Date(election.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  </div>
+                  <div className="election-details">
+                    <h4>{election.title}</h4>
+                    <span className="election-tag">{election.type}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {badges.length > 0 && (
           <>
-            <h2 className="section-title">Your Achievements</h2>
-            <div className="badges-container">
-              <div className={`badge-item ${badges.includes('civic_scholar') ? 'earned' : ''}`}>
-                <BookOpen size={16} className="badge-icon" /> Civic Scholar
+            <h2 className="section-title">{t.ui.achievements}</h2>
+            <div className="badges-container" role="list">
+              <div className={`badge-item ${badges.includes('civic_scholar') ? 'earned' : ''}`} role="listitem">
+                <BookOpen size={16} className="badge-icon" aria-hidden="true" /> {lang === 'hi' ? "नागरिक विद्वान" : "Civic Scholar"}
               </div>
-              <div className={`badge-item ${badges.includes('voting_expert') ? 'earned' : ''}`}>
-                <CheckSquare size={16} className="badge-icon" /> Voting Expert
+              <div className={`badge-item ${badges.includes('voting_expert') ? 'earned' : ''}`} role="listitem">
+                <CheckSquare size={16} className="badge-icon" aria-hidden="true" /> {lang === 'hi' ? "मतदान विशेषज्ञ" : "Voting Expert"}
               </div>
-              <div className={`badge-item ${badges.includes('timeline_master') ? 'earned' : ''}`}>
-                <Clock size={16} className="badge-icon" /> Timeline Master
+              <div className={`badge-item ${badges.includes('timeline_master') ? 'earned' : ''}`} role="listitem">
+                <Clock size={16} className="badge-icon" aria-hidden="true" /> {lang === 'hi' ? "समयरेखा मास्टर" : "Timeline Master"}
               </div>
-              <div className={`badge-item ${badges.includes('scenario_solver') ? 'earned' : ''}`}>
-                <Target size={16} className="badge-icon" /> Scenario Solver
+              <div className={`badge-item ${badges.includes('scenario_solver') ? 'earned' : ''}`} role="listitem">
+                <Target size={16} className="badge-icon" aria-hidden="true" /> {lang === 'hi' ? "परिदृश्य समाधानकर्ता" : "Scenario Solver"}
               </div>
             </div>
           </>
         )}
 
         {recommendedFlowId && (
-          <h2 className="section-title">Recommended for You</h2>
+          <h2 className="section-title">{t.ui.recommended}</h2>
         )}
         <div className="home-grid">
-          {Object.values(contentData.flows).map(flow => {
+          {Object.values(t.flows).map(flow => {
             const isRecommended = flow.id === recommendedFlowId;
             const isCompleted = profile.exploredTopics.includes(flow.id);
             return (
-              <div 
+              <button 
                 key={flow.id} 
                 className={`home-card ${isRecommended ? 'recommended' : ''} ${isCompleted ? 'completed' : ''}`} 
                 onClick={() => startFlow(flow.id)}
+                aria-label={`Start ${flow.title}${isCompleted ? ' (Completed)' : ''}${isRecommended ? ' (Recommended)' : ''}`}
+                data-recommended={isRecommended ? t.ui.recommended : undefined}
+                data-completed={isCompleted ? t.ui.completed : undefined}
               >
-                <div className="home-card-icon">
+                <div className="home-card-icon" aria-hidden="true">
                   {getIcon(flow.icon)}
                 </div>
                 <h3>{flow.title}</h3>
                 <p>{flow.description}</p>
-              </div>
+              </button>
             );
           })}
-          <div className="home-card" onClick={() => setActiveTab('chat')}>
-            <div className="home-card-icon">
+          <button className="home-card" onClick={() => setActiveTab('chat')} aria-label={t.ui.askQuestionTitle}>
+            <div className="home-card-icon" aria-hidden="true">
               <MessageSquare size={32} />
             </div>
-            <h3>Ask a Question</h3>
-            <p>Chat directly with CivicGuide AI for specific queries.</p>
-          </div>
+            <h3>{t.ui.askQuestionTitle}</h3>
+            <p>{t.ui.askQuestionDesc}</p>
+          </button>
         </div>
       </motion.div>
     );
   };
 
   const renderQuiz = () => {
-    const quiz = contentData.quizzes[quizState.activeQuizId];
-    const flowTitle = contentData.flows[quizState.activeQuizId]?.title || "Topic";
+    const quiz = t.quizzes[quizState.activeQuizId];
+    const flowTitle = t.flows[quizState.activeQuizId]?.title || "Topic";
 
     if (quizState.showResults) {
       const accuracy = Math.round((quizState.score / quiz.length) * 100);
-      let feedbackMsg = "Great job! Want to try a harder challenge next?";
-      if (accuracy < 60) feedbackMsg = "Good effort! Consider revisiting this topic to strengthen your knowledge.";
+      let feedbackMsg = lang === 'en' ? "Great job! Want to try a harder challenge next?" : "बहुत बढ़िया! क्या आप आगे कोई कठिन चुनौती आजमाना चाहते हैं?";
+      if (accuracy < 60) feedbackMsg = lang === 'en' ? "Good effort! Consider revisiting this topic to strengthen your knowledge." : "अच्छा प्रयास! अपने ज्ञान को मजबूत करने के लिए इस विषय पर दोबारा विचार करें।";
       
       return (
-        <motion.div key="quiz-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flow-container">
+        <motion.div key="quiz-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flow-container" role="main">
           <div className="flow-header">
-            <h2 className="flow-title">Quiz Results: {flowTitle}</h2>
+            <h2 className="flow-title">{t.ui.quizResults}: {flowTitle}</h2>
           </div>
           <div className="flow-card quiz-results">
-            <Trophy size={64} color="var(--warning)" style={{ marginBottom: '1rem' }} />
-            <h2>Assessment Complete!</h2>
+            <Trophy size={64} color="var(--warning)" style={{ marginBottom: '1rem' }} aria-hidden="true" />
+            <h2>{t.ui.assessmentComplete}</h2>
             
-            <div className="score-circle">
+            <div className="score-circle" aria-label={`Score: ${quizState.score} ${t.ui.outOf} ${quiz.length}`}>
               {quizState.score}
-              <span>out of {quiz.length}</span>
+              <span>{t.ui.outOf} {quiz.length}</span>
             </div>
             
-            <p style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Accuracy: {accuracy}%</p>
+            <p style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>{t.ui.accuracy}: {accuracy}%</p>
             <p style={{ color: 'var(--text-muted)', marginBottom: '3rem' }}>{feedbackMsg}</p>
             
             <div className="flow-navigation" style={{ justifyContent: 'center', gap: '1rem' }}>
                <button className="btn-nav" onClick={() => startQuiz(quizState.activeQuizId)}>
-                 Retry Quiz
+                 {t.ui.retryQuiz}
                </button>
                <button className="btn-nav action" onClick={goHome}>
-                 Return Home
+                 {t.ui.returnHome}
                </button>
             </div>
           </div>
@@ -378,14 +444,14 @@ function App() {
     const question = quiz[quizState.currentQuestionIdx];
 
     return (
-      <motion.div key={`quiz-${quizState.currentQuestionIdx}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flow-container">
+      <motion.div key={`quiz-${quizState.currentQuestionIdx}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flow-container" role="main">
         <div className="flow-header">
-          <button className="back-btn" onClick={goHome} title="Exit Quiz"><ArrowLeft size={20} /></button>
+          <button className="back-btn" onClick={goHome} aria-label="Exit Quiz"><ArrowLeft size={20} /></button>
           <h2 className="flow-title">{flowTitle} Knowledge Check</h2>
         </div>
 
-        <div className="progress-container">
-          <div className="progress-text">Question {quizState.currentQuestionIdx + 1} of {quiz.length}</div>
+        <div className="progress-container" role="progressbar" aria-valuenow={quizState.currentQuestionIdx + 1} aria-valuemin="1" aria-valuemax={quiz.length}>
+          <div className="progress-text">Question {quizState.currentQuestionIdx + 1} {t.ui.outOf} {quiz.length}</div>
           <div className="progress-bar-bg">
             <div className="progress-bar-fill" style={{ width: `${((quizState.currentQuestionIdx + 1) / quiz.length) * 100}%` }}></div>
           </div>
@@ -394,7 +460,7 @@ function App() {
         <div className="flow-card">
           <h2 style={{ color: 'var(--text)' }}>{question.question}</h2>
           
-          <div className="quiz-options">
+          <div className="quiz-options" role="radiogroup">
             {question.options.map((opt, idx) => {
               let className = "quiz-option";
               if (quizState.hasAnswered) {
@@ -410,6 +476,8 @@ function App() {
                   className={className}
                   onClick={() => handleQuizAnswer(idx)}
                   disabled={quizState.hasAnswered}
+                  role="radio"
+                  aria-checked={quizState.selectedOption === idx}
                 >
                   {opt}
                 </button>
@@ -422,13 +490,14 @@ function App() {
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
               className={`quiz-feedback ${quizState.selectedOption === question.correctAnswer ? 'success' : 'error'}`}
+              role="alert"
             >
-              <div className="quiz-feedback-icon">
+              <div className="quiz-feedback-icon" aria-hidden="true">
                 {quizState.selectedOption === question.correctAnswer ? <CheckCircle size={24} /> : <XCircle size={24} />}
               </div>
               <div>
                 <h4 style={{ marginBottom: '0.25rem', color: 'inherit' }}>
-                  {quizState.selectedOption === question.correctAnswer ? "Correct!" : "Incorrect"}
+                  {quizState.selectedOption === question.correctAnswer ? t.ui.correct : t.ui.incorrect}
                 </h4>
                 <p style={{ margin: 0 }}>{question.explanation}</p>
               </div>
@@ -436,13 +505,13 @@ function App() {
           )}
 
           <div className="flow-navigation" style={{ marginTop: '3rem' }}>
-            <div></div> {/* spacer */}
+            <div></div>
             <button 
               className="btn-nav action" 
               onClick={handleNextQuizQuestion}
               disabled={!quizState.hasAnswered}
             >
-              {quizState.currentQuestionIdx === quiz.length - 1 ? 'See Results' : 'Next Question'} <ChevronRight size={20} />
+              {quizState.currentQuestionIdx === quiz.length - 1 ? t.ui.seeResults : t.ui.nextQuestion} <ChevronRight size={20} />
             </button>
           </div>
         </div>
@@ -451,7 +520,7 @@ function App() {
   };
 
   const renderFlow = () => {
-    const flow = contentData.flows[activeFlowId];
+    const flow = t.flows[activeFlowId];
     if (!flow) return null;
 
     // --- TIMELINE VIEW ---
@@ -465,31 +534,34 @@ function App() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           className="flow-container"
+          role="main"
         >
           <div className="flow-header">
-            <button className="back-btn" onClick={goHome} title="Back to menu">
+            <button className="back-btn" onClick={goHome} aria-label="Back to menu">
               <ArrowLeft size={20} />
             </button>
             <h2 className="flow-title">{flow.title}</h2>
           </div>
           <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{flow.description}</p>
 
-          <div className="h-timeline-container">
+          <div className="h-timeline-container" role="progressbar" aria-valuenow={currentStep + 1} aria-valuemin="1" aria-valuemax={flow.stages.length}>
             <div className="h-timeline-line"></div>
             <div className="h-timeline-progress" style={{ width: `${progressWidth}%` }}></div>
             
             {flow.stages.map((stage, idx) => (
-              <div 
+              <button 
                 key={idx} 
                 className={`h-timeline-node ${idx === currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}
                 onClick={() => {
                   setCurrentStep(idx);
                   setProfile(prev => ({...prev, lastPosition: { flowId: activeFlowId, step: idx, scenarioId: null }}));
                 }}
+                aria-label={`Go to stage ${idx + 1}: ${stage.title}`}
+                aria-current={idx === currentStep ? 'step' : undefined}
               >
                 <div className="h-timeline-dot"></div>
                 <div className="h-timeline-label">{stage.shortDesc}</div>
-              </div>
+              </button>
             ))}
           </div>
 
@@ -501,8 +573,10 @@ function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
               className="timeline-detail-card"
+              role="region"
+              aria-live="polite"
             >
-              <div className="timeline-detail-icon">
+              <div className="timeline-detail-icon" aria-hidden="true">
                 {getIcon(activeStage.icon, { size: 32 })}
               </div>
               <div style={{ flex: 1 }}>
@@ -518,19 +592,19 @@ function App() {
 
           <div className="flow-navigation" style={{ marginTop: '3rem' }}>
             <button className="btn-nav" onClick={handlePrevStep} disabled={currentStep === 0}>
-              <ChevronLeft size={20} /> Previous Stage
+              <ChevronLeft size={20} /> {t.ui.previousStage}
             </button>
             <div style={{display: 'flex', gap: '1rem'}}>
               {currentStep === flow.stages.length - 1 && flow.suggestedScenario && (
                 <button className="btn-nav" style={{backgroundColor: 'var(--surface)', border: '1px solid var(--secondary)', color: 'var(--secondary)'}} onClick={() => startFlow('scenarios', 0, flow.suggestedScenario)}>
-                   Try Scenario
+                   {t.ui.tryScenario}
                 </button>
               )}
               <button 
                 className={`btn-nav ${currentStep === flow.stages.length - 1 ? 'action' : ''}`} 
                 onClick={handleNextStep}
               >
-                {currentStep === flow.stages.length - 1 ? (flow.quizId ? 'Take Quiz' : 'Finish') : 'Next Stage'} <ChevronRight size={20} />
+                {currentStep === flow.stages.length - 1 ? (flow.quizId ? t.ui.takeQuiz : t.ui.finish) : t.ui.nextStage} <ChevronRight size={20} />
               </button>
             </div>
           </div>
@@ -541,36 +615,36 @@ function App() {
     // --- SCENARIO VIEW ---
     if (flow.type === 'scenarios') {
       if (!activeScenarioId) {
-        // Find a recommended scenario based on explored topics
         const recScenario = flow.cases.find(c => !profile.exploredTopics.includes(`scenario_${c.id}`))?.id;
 
         return (
-          <motion.div key="scenario-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flow-container">
+          <motion.div key="scenario-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flow-container" role="main">
             <div className="flow-header">
-              <button className="back-btn" onClick={goHome} title="Back to menu"><ArrowLeft size={20} /></button>
+              <button className="back-btn" onClick={goHome} aria-label="Back to menu"><ArrowLeft size={20} /></button>
               <h2 className="flow-title">{flow.title}</h2>
             </div>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{flow.description}</p>
             
             <div className="scenario-grid">
               {flow.cases.map(sc => (
-                <div 
+                <button 
                   key={sc.id} 
                   className={`scenario-card ${recScenario === sc.id ? 'recommended' : ''}`} 
                   onClick={() => startFlow('scenarios', 0, sc.id)}
+                  aria-label={`Start Scenario: ${sc.question}`}
+                  data-recommended={recScenario === sc.id ? t.ui.recommended : undefined}
                 >
-                  <div className="scenario-icon">{getIcon(sc.icon, { size: 28 })}</div>
-                  <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{sc.question}</h3>
-                  <ChevronRight style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
-                </div>
+                  <div className="scenario-icon" aria-hidden="true">{getIcon(sc.icon, { size: 28 })}</div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', textAlign: 'left' }}>{sc.question}</h3>
+                  <ChevronRight style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} aria-hidden="true" />
+                </button>
               ))}
             </div>
             
-            {/* If all scenarios explored, offer the quiz */}
-            {profile.exploredTopics.filter(t => t.startsWith('scenario_')).length >= 2 && (
+            {profile.exploredTopics.filter(topic => topic.startsWith('scenario_')).length >= 2 && (
               <div style={{ marginTop: '2rem', textAlign: 'center' }}>
                  <button className="btn-nav action" style={{ margin: '0 auto' }} onClick={() => startQuiz('scenarios')}>
-                   Test Your Scenario Knowledge
+                   {t.ui.testScenarioKnowledge}
                  </button>
               </div>
             )}
@@ -578,15 +652,14 @@ function App() {
         );
       }
 
-      // Show specific scenario steps
       const scenario = flow.cases.find(c => c.id === activeScenarioId);
       const step = scenario.steps[currentStep];
       const totalSteps = scenario.steps.length;
 
       return (
-        <motion.div key={`scenario-${activeScenarioId}-${currentStep}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flow-container">
+        <motion.div key={`scenario-${activeScenarioId}-${currentStep}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flow-container" role="main">
           <div className="flow-header">
-            <button className="back-btn" onClick={() => { setActiveScenarioId(null); setCurrentStep(0); setProfile(prev => ({...prev, lastPosition: { flowId: 'scenarios', step: 0, scenarioId: null }})); }} title="Back to scenarios">
+            <button className="back-btn" onClick={() => { setActiveScenarioId(null); setCurrentStep(0); setProfile(prev => ({...prev, lastPosition: { flowId: 'scenarios', step: 0, scenarioId: null }})); }} aria-label="Back to scenarios">
               <ArrowLeft size={20} />
             </button>
             <h2 className="flow-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -594,8 +667,8 @@ function App() {
             </h2>
           </div>
           
-          <div className="progress-container">
-            <div className="progress-text">Outcome Step {currentStep + 1} of {totalSteps}</div>
+          <div className="progress-container" role="progressbar" aria-valuenow={currentStep + 1} aria-valuemin="1" aria-valuemax={totalSteps}>
+            <div className="progress-text">Step {currentStep + 1} {t.ui.outOf} {totalSteps}</div>
             <div className="progress-bar-bg">
               <div className="progress-bar-fill" style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}></div>
             </div>
@@ -603,7 +676,7 @@ function App() {
 
           <div className="flow-card">
             <div className="scenario-step">
-              <div className="scenario-step-number">{currentStep + 1}</div>
+              <div className="scenario-step-number" aria-hidden="true">{currentStep + 1}</div>
               <div>
                 <h2 style={{ marginBottom: '1rem', color: 'var(--primary)', marginTop: '0.2rem' }}>{step.title}</h2>
                 <div className="flow-content">{step.content}</div>
@@ -612,13 +685,13 @@ function App() {
             
             <div className="flow-navigation">
               <button className="btn-nav" onClick={handlePrevStep} disabled={currentStep === 0}>
-                <ChevronLeft size={20} /> Previous
+                <ChevronLeft size={20} /> {t.ui.previous}
               </button>
               <button 
                 className={`btn-nav ${currentStep === totalSteps - 1 ? 'action' : ''}`} 
                 onClick={handleNextStep}
               >
-                {currentStep === totalSteps - 1 ? 'Finish Scenario' : 'What Happens Next?'} <ChevronRight size={20} />
+                {currentStep === totalSteps - 1 ? t.ui.finishScenario : t.ui.whatHappensNext} <ChevronRight size={20} />
               </button>
             </div>
           </div>
@@ -642,16 +715,17 @@ function App() {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -20 }}
         className="flow-container"
+        role="main"
       >
         <div className="flow-header">
-          <button className="back-btn" onClick={goHome} title="Back to menu">
+          <button className="back-btn" onClick={goHome} aria-label="Back to menu">
             <ArrowLeft size={20} />
           </button>
           <h2 className="flow-title">{flow.title}</h2>
         </div>
         
-        <div className="progress-container">
-          <div className="progress-text">Step {currentStep + 1} of {totalSteps}</div>
+        <div className="progress-container" role="progressbar" aria-valuenow={currentStep + 1} aria-valuemin="1" aria-valuemax={totalSteps}>
+          <div className="progress-text">Step {currentStep + 1} {t.ui.outOf} {totalSteps}</div>
           <div className="progress-bar-bg">
             <div className="progress-bar-fill" style={{ width: `${progressPercentage}%` }}></div>
           </div>
@@ -661,35 +735,38 @@ function App() {
           <h2>{step.title}</h2>
           
           {(step.simplified || step.expanded) && (
-            <div className="depth-controls">
+            <div className="depth-controls" role="group" aria-label="Adjust explanation complexity">
               {step.simplified && (
                 <button 
                   className={`depth-btn ${explanationDepth === 'simplified' ? 'active' : ''}`}
                   onClick={() => updateProfileKnowledge('simplified')}
-                  title="Make it simpler (App will remember your preference)"
+                  title="Make it simpler"
+                  aria-pressed={explanationDepth === 'simplified'}
                 >
-                  <MinusCircle size={18} /> Simplify
+                  <MinusCircle size={18} aria-hidden="true" /> {t.ui.simplify}
                 </button>
               )}
               <button 
                 className={`depth-btn ${explanationDepth === 'normal' ? 'active' : ''}`}
                 onClick={() => updateProfileKnowledge('normal')}
+                aria-pressed={explanationDepth === 'normal'}
               >
-                <BookOpen size={18} /> Normal
+                <BookOpen size={18} aria-hidden="true" /> {t.ui.normal}
               </button>
               {step.expanded && (
                 <button 
                   className={`depth-btn ${explanationDepth === 'expanded' ? 'active' : ''}`}
                   onClick={() => updateProfileKnowledge('expanded')}
-                  title="Show more detail (App will remember your preference)"
+                  title="Show more detail"
+                  aria-pressed={explanationDepth === 'expanded'}
                 >
-                  <PlusCircle size={18} /> Tell Me More
+                  <PlusCircle size={18} aria-hidden="true" /> {t.ui.tellMeMore}
                 </button>
               )}
             </div>
           )}
 
-          <div className="flow-content">
+          <div className="flow-content" aria-live="polite">
             <motion.div
                key={explanationDepth}
                initial={{ opacity: 0, y: 5 }}
@@ -706,19 +783,19 @@ function App() {
               onClick={handlePrevStep}
               disabled={currentStep === 0}
             >
-              <ChevronLeft size={20} /> Previous
+              <ChevronLeft size={20} /> {t.ui.previous}
             </button>
             <div style={{display: 'flex', gap: '1rem'}}>
                {currentStep === totalSteps - 1 && flow.suggestedNext && (
                  <button className="btn-nav" style={{backgroundColor: 'var(--surface)', border: '1px solid var(--secondary)', color: 'var(--secondary)'}} onClick={() => startFlow(flow.suggestedNext)}>
-                    Skip to Next Topic
+                    {t.ui.skipToNext}
                  </button>
                )}
                <button 
                  className={`btn-nav ${currentStep === totalSteps - 1 ? 'action' : ''}`} 
                  onClick={handleNextStep}
                >
-                 {currentStep === totalSteps - 1 ? (flow.quizId ? 'Take Quiz' : 'Finish') : 'Next Step'} <ChevronRight size={20} />
+                 {currentStep === totalSteps - 1 ? (flow.quizId ? t.ui.takeQuiz : t.ui.finish) : t.ui.nextStep} <ChevronRight size={20} />
                </button>
             </div>
           </div>
@@ -734,15 +811,16 @@ function App() {
       animate={{ opacity: 1 }}
       className="flow-container"
       style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+      role="main"
     >
       <div className="flow-header">
-        <button className="back-btn" onClick={goHome} title="Back to menu">
+        <button className="back-btn" onClick={goHome} aria-label="Back to menu">
           <ArrowLeft size={20} />
         </button>
-        <h2 className="flow-title">Ask CivicGuide AI</h2>
+        <h2 className="flow-title">CivicGuide AI</h2>
       </div>
 
-      <div className="scroll-container" ref={scrollRef}>
+      <div className="scroll-container" ref={scrollRef} aria-live="polite">
         <AnimatePresence>
           {chatHistory.map((msg, idx) => (
             <motion.div 
@@ -751,7 +829,7 @@ function App() {
               animate={{ opacity: 1, y: 0 }}
               className={`message ${msg.type}`}
             >
-              <div className="avatar">
+              <div className="avatar" aria-hidden="true">
                 {msg.type === 'bot' ? 'CG' : 'U'}
               </div>
               <div className="bubble">
@@ -763,7 +841,7 @@ function App() {
         
         {isTyping && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="message bot">
-            <div className="avatar">CG</div>
+            <div className="avatar" aria-hidden="true">CG</div>
             <div className="bubble" style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '44px' }}>
               <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} style={{ width: '8px', height: '8px', backgroundColor: 'var(--text-muted)', borderRadius: '50%' }} />
               <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} style={{ width: '8px', height: '8px', backgroundColor: 'var(--text-muted)', borderRadius: '50%' }} />
@@ -776,12 +854,13 @@ function App() {
       <form className="action-bar" onSubmit={handleTextSubmit}>
         <input 
           type="text" 
-          placeholder="Ask about ties, voting, counting, or security..." 
+          placeholder="..." 
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           disabled={isTyping}
+          aria-label="Chat input"
         />
-        <button type="submit" disabled={!inputValue.trim() || isTyping}>
+        <button type="submit" disabled={!inputValue.trim() || isTyping} aria-label="Send message">
           <Send size={20} />
         </button>
       </form>
@@ -790,26 +869,34 @@ function App() {
 
   return (
     <>
-      <nav className="navbar">
-        <div className="logo" onClick={goHome}>
-          <BookOpen className="icon" size={24} /> CivicGuide AI
-        </div>
+      <nav className="navbar" role="navigation">
+        <button className="logo" onClick={goHome} aria-label="Go to home">
+          <BookOpen className="icon" size={24} aria-hidden="true" /> CivicGuide AI
+        </button>
         <div className="nav-links">
+          <button 
+             className="nav-link" 
+             onClick={toggleLanguage}
+             aria-label="Toggle language"
+             title="Switch Language"
+          >
+            <Globe size={18} /> {lang.toUpperCase()}
+          </button>
           <button className={`nav-link ${activeTab === 'home' ? 'active' : ''}`} onClick={goHome}>
-            <Home size={18} /> Home
+            <Home size={18} /> <span className="hide-mobile">{t.ui.home}</span>
           </button>
           <button className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
-            <MessageSquare size={18} /> Ask AI
+            <MessageSquare size={18} /> <span className="hide-mobile">{t.ui.askAI}</span>
           </button>
         </div>
       </nav>
 
       <div className="app-container">
         {activeTab === 'home' && (
-          <div className="header">
-            <h1>Welcome to CivicGuide</h1>
-            <p>Select a topic below to begin your guided learning journey.</p>
-          </div>
+          <header className="header">
+            <h1>{t.ui.welcomeTitle}</h1>
+            <p>{t.ui.welcomeDesc}</p>
+          </header>
         )}
 
         <main className="main-content">
