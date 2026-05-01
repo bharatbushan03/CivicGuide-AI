@@ -910,3 +910,54 @@ button {
 @media (max-width: 600px) {
   .hide-mobile { display: none; }
 }
+
+/* Landing Page */
+.landing-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 70px);
+  padding: 2rem;
+  background: radial-gradient(circle at center, rgba(79, 70, 229, 0.15) 0%, var(--background) 70%);
+}
+.landing-content {
+  text-align: center;
+  max-width: 600px;
+}
+.landing-logo {
+  color: var(--primary);
+  margin-bottom: 2rem;
+}
+.landing-content h1 {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.landing-desc {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  margin-bottom: 3rem;
+  line-height: 1.6;
+}
+.landing-btn {
+  background-color: var(--primary);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 3rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s;
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+}
+.landing-btn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 15px 25px rgba(79, 70, 229, 0.4);
+}
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { 
   BookOpen, CheckSquare, Clock, MessageSquare, 
   ChevronRight, ChevronLeft, MinusCircle, PlusCircle,
@@ -9,6 +9,10 @@ import {
 import { contentData } from './data/content';
 import { fetchUpcomingElections } from './data/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useProfile } from './hooks/useProfile';
+import { checkAndAwardBadges, getRecommendedFlow } from './utils/helpers';
+
+const Landing = React.lazy(() => import('./components/Landing'));
 
 const getIcon = (iconName, props = { size: 32 }) => {
   switch (iconName) {
@@ -27,27 +31,6 @@ const getIcon = (iconName, props = { size: 32 }) => {
     case 'Scale': return <Scale {...props} />;
     default: return <BookOpen {...props} />;
   }
-};
-
-const useProfile = () => {
-  const [profile, setProfile] = useState(() => {
-    const saved = localStorage.getItem('civicGuideProfile');
-    if (saved) return JSON.parse(saved);
-    return {
-      knowledgeLevel: 'normal',
-      exploredTopics: [],
-      lastPosition: null,
-      badges: [],
-      quizScores: {},
-      language: 'en'
-    };
-  });
-
-  useEffect(() => {
-    localStorage.setItem('civicGuideProfile', JSON.stringify(profile));
-  }, [profile]);
-
-  return [profile, setProfile];
 };
 
 function App() {
@@ -85,11 +68,12 @@ function App() {
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    loadElections();
-  }, [lang]);
+    if (profile.hasStarted) {
+      loadElections();
+    }
+  }, [lang, profile.hasStarted]);
 
   useEffect(() => {
-    // Reset welcome message on language change if it's the only message
     if (chatHistory.length === 1 && chatHistory[0].type === 'bot') {
        setChatHistory([{ type: 'bot', text: t.chat.welcome }]);
     }
@@ -112,6 +96,10 @@ function App() {
     } finally {
       setElectionsLoading(false);
     }
+  };
+
+  const handleStart = () => {
+    setProfile(prev => ({ ...prev, hasStarted: true }));
   };
 
   const toggleLanguage = () => {
@@ -148,25 +136,6 @@ function App() {
     setActiveTab('quiz');
   };
 
-  const checkAndAwardBadges = (scores, explored) => {
-    const newBadges = [...(profile.badges || [])];
-    
-    if (!newBadges.includes('civic_scholar') && scores['basics'] === 3 && explored.includes('basics')) {
-      newBadges.push('civic_scholar');
-    }
-    if (!newBadges.includes('voting_expert') && scores['voting'] === 3 && explored.includes('voting')) {
-      newBadges.push('voting_expert');
-    }
-    if (!newBadges.includes('timeline_master') && scores['timeline'] === 3 && explored.includes('timeline')) {
-      newBadges.push('timeline_master');
-    }
-    if (!newBadges.includes('scenario_solver') && scores['scenarios'] === 3) {
-      newBadges.push('scenario_solver');
-    }
-
-    return newBadges;
-  };
-
   const handleNextStep = () => {
     const flow = t.flows[activeFlowId];
     let maxSteps = 0;
@@ -187,7 +156,6 @@ function App() {
         lastPosition: { flowId: activeFlowId, step: nextStep, scenarioId: activeScenarioId }
       }));
     } else {
-      // Finished Flow!
       setProfile(prev => {
         const newExplored = [...prev.exploredTopics];
         if (!newExplored.includes(activeFlowId)) newExplored.push(activeFlowId);
@@ -250,12 +218,10 @@ function App() {
         hasAnswered: false
       }));
     } else {
-      // Finish Quiz
       setQuizState(prev => ({ ...prev, showResults: true }));
-      
       setProfile(prev => {
         const newScores = { ...prev.quizScores, [quizState.activeQuizId]: quizState.score };
-        const newBadges = checkAndAwardBadges(newScores, prev.exploredTopics);
+        const newBadges = checkAndAwardBadges(newScores, prev.exploredTopics, prev.badges);
         return { ...prev, quizScores: newScores, badges: newBadges };
       });
     }
@@ -282,16 +248,16 @@ function App() {
     }, 1000);
   };
 
-  const getRecommendedFlow = () => {
-    if (profile.exploredTopics.includes('basics') && !profile.exploredTopics.includes('voting')) return 'voting';
-    if (profile.exploredTopics.includes('voting') && !profile.exploredTopics.includes('timeline')) return 'timeline';
-    if (profile.exploredTopics.includes('timeline') && !profile.exploredTopics.includes('scenarios')) return 'scenarios';
-    if (profile.exploredTopics.length === 0) return 'basics';
-    return null;
-  };
+  if (!profile.hasStarted) {
+    return (
+      <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}><Loader className="spinner" size={48} color="var(--primary)"/></div>}>
+        <Landing onStart={handleStart} />
+      </Suspense>
+    );
+  }
 
   const renderHome = () => {
-    const recommendedFlowId = getRecommendedFlow();
+    const recommendedFlowId = getRecommendedFlow(profile.exploredTopics);
     const badges = profile.badges || [];
 
     return (
@@ -523,7 +489,6 @@ function App() {
     const flow = t.flows[activeFlowId];
     if (!flow) return null;
 
-    // --- TIMELINE VIEW ---
     if (flow.type === 'timeline') {
       const activeStage = flow.stages[currentStep];
       const progressWidth = (currentStep / (flow.stages.length - 1)) * 100;
@@ -612,7 +577,6 @@ function App() {
       );
     }
 
-    // --- SCENARIO VIEW ---
     if (flow.type === 'scenarios') {
       if (!activeScenarioId) {
         const recScenario = flow.cases.find(c => !profile.exploredTopics.includes(`scenario_${c.id}`))?.id;
@@ -699,7 +663,6 @@ function App() {
       );
     }
 
-    // --- STANDARD STEP-BY-STEP FLOW VIEW ---
     const step = flow.steps[currentStep];
     const totalSteps = flow.steps.length;
     const progressPercentage = ((currentStep + 1) / totalSteps) * 100;
