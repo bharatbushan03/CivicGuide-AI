@@ -57,6 +57,26 @@ Visit `http://localhost:5173` to experience CivicGuide AI.
 
 ---
 
+## 🔌 Optional: Google Civic API Integration
+
+If you want the “Upcoming Elections” widget to pull live data from Google Civic Information API, create a `.env` file with the following value:
+
+```bash
+VITE_GOOGLE_CIVIC_API_KEY=YOUR_API_KEY_HERE
+```
+
+If the key is not set, the app falls back to local sample data.
+
+---
+
+## ✅ Running Tests
+
+```bash
+npm run test
+```
+
+---
+
 ## 🔮 Future Improvements
 
 While CivicGuide AI is a polished, production-ready product, future roadmap items include:
